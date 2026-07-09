@@ -21,6 +21,12 @@ async function dbConnect() {
       bufferCommands: false,
     };
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      // Force registration of models
+      require("@/models/Station");
+      require("@/models/Route");
+      require("@/models/Train");
+      require("@/models/User");
+      require("@/models/SeatInventory");
       return mongoose;
     });
   }
