@@ -83,8 +83,22 @@ export default function BookingForm({
   const convenienceFee = 35; // Flat fee
   const totalFare = Math.max(0, baseFare + reservationCharges + gst + convenienceFee - discount);
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    // Extract form data synchronously before any await!
+    const formData = new FormData(e.currentTarget);
+    
     setLoading(true);
     
     // Validate
@@ -101,7 +115,13 @@ export default function BookingForm({
       return;
     }
 
-    const formData = new FormData(e.currentTarget);
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      alert("Failed to load Razorpay SDK. Please check your connection.");
+      setLoading(false);
+      return;
+    }
+
     formData.append("trainId", train._id.toString());
     formData.append("seatClass", seatClass);
     if (journeyDate) formData.append("journeyDate", journeyDate);
@@ -117,9 +137,76 @@ export default function BookingForm({
       if (res?.error) {
         alert(res.error);
         setLoading(false);
-      } else if (res?.bookingId) {
-        router.push(`/payment/${res.bookingId}`);
+        return;
+      } 
+      
+      const bookingId = res?.bookingId;
+      if (!bookingId) {
+         alert("Failed to secure booking.");
+         setLoading(false);
+         return;
       }
+
+      // Generate Razorpay Order
+      const orderRes = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId })
+      });
+      const orderData = await orderRes.json();
+      
+      if (!orderData.success) {
+        alert(orderData.error || "Failed to create order");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+
+      const options = {
+        key: orderData.key_id, 
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "RailConnect",
+        description: `Booking ID: ${bookingId.substring(0,8).toUpperCase()}`,
+        order_id: orderData.order_id,
+        handler: async function (response: any) {
+           setLoading(true);
+           try {
+             const { confirmPayment } = await import("@/app/actions");
+             const confirmRes = await confirmPayment(bookingId);
+             if (confirmRes?.error) {
+               alert(confirmRes.error);
+             } else {
+               // Fire off email and SMS asynchronously (fire-and-forget)
+               import("@/app/actions/comms").then(({ sendTicketEmail, sendTicketSMS }) => {
+                 sendTicketEmail(bookingId).catch(console.error);
+                 sendTicketSMS(bookingId).catch(console.error);
+               });
+               router.push(`/bookings/${res.pnr}`);
+             }
+           } catch(e) {
+             alert("Error confirming ticket after payment.");
+           }
+           setLoading(false);
+        },
+        prefill: {
+          name: passengers[0]?.name || "User",
+          contact: emergencyContact || "9999999999"
+        },
+        theme: {
+          color: "#0f172a" 
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      
+      rzp.on("payment.failed", function (response: any) {
+        alert("Payment Failed! Reason: " + response.error.description);
+      });
+
+      rzp.open();
+
     } catch (error) {
       alert("Failed to book ticket. Please try again.");
       setLoading(false);
@@ -199,7 +286,7 @@ export default function BookingForm({
                       <option value="Passport">Passport</option>
                       <option value="Voter ID">Voter ID</option>
                     </select>
-                    <input type="text" value={p.idNumber} onChange={(e) => updatePassenger(idx, "idNumber", e.target.value)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400" placeholder="ID Number" />
+                    <input type="text" value={p.idNumber} onChange={(e) => updatePassenger(idx, "idNumber", e.target.value)} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400" placeholder={p.idType === 'Aadhaar' ? "Aadhaar Number" : `${p.idType} Number`} required={true} />
                   </div>
                   
                   {/* Quotas & Concessions */}
