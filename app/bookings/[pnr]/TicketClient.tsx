@@ -217,17 +217,33 @@ export default function TicketClient({ booking }: { booking: any }) {
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-100 print:divide-black font-medium text-slate-900">
-                {booking.passengers.map((p: any, idx: number) => (
-                  <tr key={idx}>
-                    <td className="p-4 font-bold">{p.name}</td>
-                    <td className="p-4 text-slate-600">{p.age} / {p.gender.charAt(0)}</td>
-                    <td className="p-4 font-black">{p.allocatedCoach}</td>
-                    <td className="p-4 font-black">
-                      {p.allocatedSeat > 0 ? `${p.allocatedSeat} (${p.allocatedBerthType})` : p.allocatedBerthType}
-                    </td>
-                    <td className="p-4 text-emerald-600 font-black tracking-widest">CNF</td>
-                  </tr>
-                ))}
+                {booking.passengers.map((p: any, idx: number) => {
+                  let statusColor = "text-emerald-600";
+                  let displayStatus = "CNF";
+                  
+                  if (p.currentStatus === "CANCELLED") {
+                    statusColor = "text-red-600";
+                    displayStatus = "CANCELLED";
+                  } else if (p.currentStatus === "WL") {
+                    statusColor = "text-orange-500";
+                    displayStatus = `WL / ${p.queuePosition}`;
+                  } else if (p.currentStatus === "RAC") {
+                    statusColor = "text-amber-500";
+                    displayStatus = `RAC / ${p.queuePosition}`;
+                  }
+
+                  return (
+                    <tr key={idx} className={p.currentStatus === 'CANCELLED' ? 'opacity-50 line-through' : ''}>
+                      <td className="p-4 font-bold">{p.name}</td>
+                      <td className="p-4 text-slate-600">{p.age} / {p.gender.charAt(0)}</td>
+                      <td className="p-4 font-black">{p.allocatedCoach}</td>
+                      <td className="p-4 font-black">
+                        {p.allocatedSeat > 0 ? `${p.allocatedSeat} (${p.allocatedBerthType})` : p.allocatedBerthType}
+                      </td>
+                      <td className={`p-4 font-black tracking-widest ${statusColor}`}>{displayStatus}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
