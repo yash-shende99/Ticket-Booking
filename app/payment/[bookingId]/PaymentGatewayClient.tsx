@@ -10,6 +10,7 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
   const [processingState, setProcessingState] = useState("");
+  const [simulateFailure, setSimulateFailure] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -32,30 +33,96 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (simulateFailure) {
+      setLoading(true);
+      setProcessingState("Connecting to Bank...");
+      await new Promise(r => setTimeout(r, 1500));
+      alert("Payment Failed! Bank rejected the transaction (Simulated Failure).");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    setProcessingState("Connecting to Bank...");
+    setProcessingState("Initializing Secure Payment...");
     
-    // Simulate realistic delay
-    await new Promise(r => setTimeout(r, 1500));
-    setProcessingState("Processing Payment...");
-    
-    await new Promise(r => setTimeout(r, 1500));
-    setProcessingState("Securing Seats...");
-    
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) {
+      alert("Failed to load Razorpay SDK. Please check your connection.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await confirmPayment(booking._id);
-      if (res?.error) {
-        alert(res.error);
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking._id })
+      });
+      const orderData = await res.json();
+      
+      if (!orderData.success) {
+        alert(orderData.error || "Failed to create order");
         setLoading(false);
-      } else {
-        setProcessingState("Payment Successful!");
-        await new Promise(r => setTimeout(r, 800));
-        router.push(`/bookings/${booking.pnr}`);
+        return;
       }
+
+      setLoading(false);
+
+      const options = {
+        key: orderData.key_id, 
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "RailConnect",
+        description: `Booking ID: ${booking._id.substring(0,8).toUpperCase()}`,
+        order_id: orderData.order_id,
+        handler: async function (response: any) {
+           setLoading(true);
+           setProcessingState("Payment Successful! Confirming Ticket...");
+           try {
+             const confirmRes = await confirmPayment(booking._id);
+             if (confirmRes?.error) {
+               alert(confirmRes.error);
+             } else {
+               router.push(`/bookings/${booking.pnr}`);
+             }
+           } catch(e) {
+             alert("Error confirming ticket after payment.");
+           }
+           setLoading(false);
+        },
+        prefill: {
+          name: "User",
+          email: "user@example.com",
+          contact: "9999999999"
+        },
+        theme: {
+          color: "#0f172a" 
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      
+      rzp.on("payment.failed", function (response: any) {
+        alert("Payment Failed! Reason: " + response.error.description);
+      });
+
+      rzp.open();
+
     } catch (err) {
-      alert("Payment Failed. Try again.");
+      alert("Payment initialization failed.");
       setLoading(false);
     }
   };
@@ -78,13 +145,19 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
           
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-black text-slate-900">Payment Gateway</h2>
-            <div className={`px-4 py-1 rounded-full text-sm font-bold shadow-sm ${timeLeft < 60 ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-slate-100 text-slate-700'}`}>
-              Time Left: {formatTime(timeLeft)}
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-100 transition-colors">
+                <input type="checkbox" checked={simulateFailure} onChange={(e) => setSimulateFailure(e.target.checked)} className="w-4 h-4 accent-red-600 cursor-pointer" />
+                <span className="text-xs font-bold uppercase tracking-wide">Simulate Failure</span>
+              </label>
+              <div className={`px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border ${timeLeft < 60 ? 'bg-red-100 text-red-600 border-red-200 animate-pulse' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                Time Left: {formatTime(timeLeft)}
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-            {["UPI", "Credit Card", "Net Banking"].map((m) => (
+          <div className="flex gap-4 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+            {["UPI", "Credit Card", "Debit Card", "Net Banking", "Wallet", "EMI"].map((m) => (
               <button 
                 key={m}
                 onClick={() => setMethod(m)}
@@ -112,39 +185,78 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
               </div>
             )}
 
-            {method === "Credit Card" && (
-              <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+            {(method === "Credit Card" || method === "Debit Card") && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-slate-500 font-medium mb-2 text-sm">Enter your {method.toLowerCase()} details to securely pay</p>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Card Number</label>
-                  <input type="text" placeholder="XXXX XXXX XXXX XXXX" maxLength={19} className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none font-medium text-slate-800 tracking-widest" required />
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Card Number</label>
+                  <input type="text" placeholder="0000 0000 0000 0000" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-mono" maxLength={19} required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Valid Thru</label>
-                    <input type="text" placeholder="MM/YY" maxLength={5} className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none font-medium text-slate-800" required />
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Expiry Date</label>
+                    <input type="text" placeholder="MM/YY" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-mono" maxLength={5} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">CVV</label>
-                    <input type="password" placeholder="***" maxLength={3} className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none font-medium text-slate-800" required />
+                    <label className="block text-sm font-bold text-slate-700 mb-1">CVV</label>
+                    <input type="password" placeholder="•••" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-mono" maxLength={4} required />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Name on Card</label>
-                  <input type="text" placeholder="JOHN DOE" className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none font-medium text-slate-800 uppercase" required />
+                  <label className="block text-sm font-bold text-slate-700 mb-1">Name on Card</label>
+                  <input type="text" placeholder="John Doe" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-slate-700" required />
                 </div>
               </div>
             )}
 
             {method === "Net Banking" && (
-              <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Select Bank</label>
-                  <select className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 outline-none font-medium text-slate-800">
-                    <option>State Bank of India</option>
-                    <option>HDFC Bank</option>
-                    <option>ICICI Bank</option>
-                    <option>Axis Bank</option>
-                  </select>
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-slate-500 font-medium mb-4 text-sm">Select your bank for authorization</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {["SBI", "HDFC", "ICICI", "Axis", "Kotak", "PNB"].map(bank => (
+                    <label key={bank} className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input type="radio" name="bank" required className="w-4 h-4 accent-indigo-600" />
+                      <span className="font-bold text-slate-700">{bank}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {method === "Wallet" && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-slate-500 font-medium mb-4 text-sm">Pay using your preferred wallet</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {["Paytm", "PhonePe", "Amazon Pay", "Mobikwik"].map(wallet => (
+                    <label key={wallet} className="flex flex-col items-center justify-center gap-2 p-6 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors group">
+                      <input type="radio" name="wallet" required className="w-4 h-4 accent-indigo-600 mb-2" />
+                      <span className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{wallet}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {method === "EMI" && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-slate-500 font-medium mb-4 text-sm">Choose an EMI tenure</p>
+                <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-slate-700 mb-4" required>
+                  <option value="">Select Bank...</option>
+                  <option value="hdfc">HDFC Bank Credit Card</option>
+                  <option value="sbi">SBI Credit Card</option>
+                  <option value="icici">ICICI Bank Credit Card</option>
+                  <option value="bajaj">Bajaj Finserv EMI Card</option>
+                </select>
+                <div className="grid grid-cols-1 gap-3">
+                  {["3 Months @ 12% p.a.", "6 Months @ 14% p.a.", "9 Months @ 15% p.a.", "12 Months @ 15% p.a."].map(tenure => (
+                    <label key={tenure} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <input type="radio" name="tenure" required className="w-4 h-4 accent-indigo-600" />
+                        <span className="font-bold text-slate-700">{tenure.split('@')[0]}</span>
+                      </div>
+                      <span className="text-sm font-bold text-emerald-600">@{tenure.split('@')[1]}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             )}
