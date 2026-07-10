@@ -17,6 +17,10 @@ export interface IPassenger {
   allocatedCoach?: string;
   allocatedSeat?: number;
   allocatedBerthType?: string;
+  // WL/RAC Engine
+  bookingStatus?: string; // e.g., CNF, RAC, WL
+  currentStatus?: string; // e.g., CNF, RAC, WL
+  queuePosition?: number; // e.g., 1 (WL 1), 2 (RAC 2)
 }
 
 export interface IFareDetails {
@@ -58,7 +62,10 @@ const PassengerSchema = new Schema<IPassenger>({
   // Seat Allocation fields
   allocatedCoach: { type: String },
   allocatedSeat: { type: Number },
-  allocatedBerthType: { type: String }
+  allocatedBerthType: { type: String },
+  bookingStatus: { type: String, default: 'CNF' },
+  currentStatus: { type: String, default: 'CNF' },
+  queuePosition: { type: Number, default: 0 },
 });
 
 const BookingSchema: Schema = new Schema({
