@@ -31,13 +31,16 @@ export function Navbar() {
               {session ? (
                 <>
                   <span className="text-sm font-bold text-slate-700 hidden lg:block">Hi, {session.user?.name?.split(' ')[0]}</span>
-                  <div className="w-10 h-10 bg-slate-300 rounded-full overflow-hidden shadow-sm relative group cursor-pointer border-2 border-transparent hover:border-white transition-all">
-                    <img src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${session.user?.name}`} alt="Avatar" className="w-full h-full object-cover" />
+                  <div className="relative group cursor-pointer">
+                    <div className="w-10 h-10 bg-slate-300 rounded-full overflow-hidden shadow-sm border-2 border-transparent hover:border-white transition-all">
+                      <img src={`https://api.dicebear.com/7.x/fun-emoji/svg?seed=${session.user?.name}`} alt="Avatar" className="w-full h-full object-cover" />
+                    </div>
                     
                     {/* Dropdown */}
-                    <div className="absolute right-0 top-12 mt-2 w-48 bg-white rounded-2xl shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity border border-slate-100">
-                      <div className="p-2">
+                    <div className="absolute right-0 top-10 pt-2 w-48 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
+                      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-2">
                         <Link href="/profile" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl font-medium">Profile</Link>
+                        <Link href="/profile/payments" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl font-medium">Payment History</Link>
                         {(session.user as any)?.role === 'admin' && (
                           <Link href="/admin" className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-xl font-bold">Admin Dashboard</Link>
                         )}

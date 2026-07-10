@@ -69,17 +69,31 @@ export default function HomePageSections({ popularRoutes }: { popularRoutes?: an
               </svg>
               Recent Searches
             </h3>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {recentSearches.map((route, i) => (
-                <div onClick={() => route.source && route.dest && router.push(`/search?source=${route.source}&dest=${route.dest}&date=${route.dateVal}`)} key={i} className="min-w-[220px] bg-white/60 backdrop-blur-md rounded-3xl p-5 shadow-[0_8px_32px_rgb(0,0,0,0.03)] border border-white hover:shadow-lg hover:bg-white transition-all cursor-pointer group">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-slate-800">{route.fromName}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-slate-300 group-hover:text-slate-900 transition-colors">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-                    </svg>
-                    <span className="font-bold text-slate-800">{route.toName}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {recentSearches.slice(0, 4).map((route, i) => (
+                <div onClick={() => route.source && route.dest && router.push(`/search?source=${route.source}&dest=${route.dest}&date=${route.dateVal}`)} key={i} className="group flex items-center justify-between p-4 rounded-2xl bg-white hover:bg-slate-50/80 border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm md:text-base flex items-center gap-2">
+                        {route.fromName} 
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3 h-3 text-slate-300">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                        {route.toName}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-semibold tracking-wide mt-0.5">{route.date}</p>
+                    </div>
                   </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{route.date}</p>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0 duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 text-slate-900">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
                 </div>
               ))}
             </div>
