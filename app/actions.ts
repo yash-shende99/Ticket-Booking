@@ -45,80 +45,95 @@ export async function createBooking(formData: FormData) {
     const journeyDate = journeyDateStr ? new Date(journeyDateStr) : new Date();
     journeyDate.setHours(0, 0, 0, 0);
     
+    // Capacity Engine using Database Quotas
     const inventory = await SeatInventory.findOne({
       train: train._id,
       journeyDate,
       coachClass: seatClass
     });
 
-    let bookingStatus = "CONFIRMED";
-    const numPassengersToBook = passengers.filter((p:any) => !(p.isInfant && Number(p.age) < 5)).length;
+    // Use actual DB config if available, otherwise strict 5-5 for demo safety
+    const MAX_CNF = inventory ? inventory.totalSeats : 5;
+    const MAX_RAC = inventory ? inventory.racSeats : 5;
 
-    if (inventory) {
-      if (inventory.availableSeats >= numPassengersToBook) {
-        inventory.availableSeats -= numPassengersToBook;
-        bookingStatus = "CONFIRMED";
-      } else if (inventory.racCount + numPassengersToBook <= inventory.racSeats) {
-        inventory.racCount += numPassengersToBook;
-        bookingStatus = "RAC";
-      } else if (inventory.wlCount + numPassengersToBook <= inventory.wlSeats) {
-        inventory.wlCount += numPassengersToBook;
-        bookingStatus = "WL";
-      } else {
-        return { error: "Not enough seats available. Train is fully booked." };
-      }
-      await inventory.save();
-    }
+    const existingBookings = await Booking.find({
+      trainId,
+      seatClass,
+      journeyDate,
+      status: { $ne: 'CANCELLED' }
+    });
+    
+    let existingSeatsBooked = 0;
+    existingBookings.forEach(b => {
+      existingSeatsBooked += b.passengers.filter((p:any) => !(p.isInfant && p.age < 5)).length;
+    });
 
-    // Seat Allocation Engine (Allocate Berths)
-    if (bookingStatus === "CONFIRMED") {
-      // Generate coach prefix based on class
-      let coachPrefix = "S";
-      if (seatClass === "1A") coachPrefix = "H";
-      else if (seatClass === "2A") coachPrefix = "A";
-      else if (seatClass === "3A") coachPrefix = "B";
-      else if (seatClass === "CC") coachPrefix = "C";
-      
-      // Simulate finding a contiguous block of seats for the family
-      const coachNumber = Math.floor(Math.random() * 4) + 1; // e.g., B1, B2, B3, B4
-      const allocatedCoach = `${coachPrefix}${coachNumber}`;
-      let startingSeat = Math.floor(Math.random() * 60) + 1;
-
-      passengers = passengers.map((p: any) => {
-        if (p.isInfant && Number(p.age) < 5) {
-          return { ...p, allocatedCoach: "N/A", allocatedSeat: 0, allocatedBerthType: "No Berth" };
-        }
-        
-        const seatNum = startingSeat++;
-        
-        // Override logic for specific quotas (just simulated for UI display)
-        let finalBerth = getBerthType(seatNum);
-        if ((p.isSeniorCitizen || p.isDisabled) && p.berthPreference === "Lower") {
-          finalBerth = "Lower"; // Engine prioritizes lower for seniors
-        } else if (p.berthPreference !== "No Preference") {
-          // Engine attempts to match preference
-          if (Math.random() > 0.3) finalBerth = p.berthPreference;
-        }
-
-        return {
-          ...p,
-          allocatedCoach,
-          allocatedSeat: seatNum,
-          allocatedBerthType: finalBerth
+    passengers = passengers.map((p: any) => {
+      if (p.isInfant && Number(p.age) < 5) {
+        return { 
+          ...p, 
+          allocatedCoach: "N/A", 
+          allocatedSeat: 0, 
+          allocatedBerthType: "No Berth",
+          bookingStatus: "CNF",
+          currentStatus: "CNF",
+          queuePosition: 0
         };
-      });
-    } else {
-      // WL or RAC allocation
-      passengers = passengers.map((p: any) => {
-         if (p.isInfant && Number(p.age) < 5) return { ...p, allocatedCoach: "N/A", allocatedSeat: 0, allocatedBerthType: "No Berth" };
-         return {
-           ...p,
-           allocatedCoach: bookingStatus,
-           allocatedSeat: 0,
-           allocatedBerthType: bookingStatus
-         };
-      });
-    }
+      }
+      
+      existingSeatsBooked++; // Book seat by seat
+      
+      let pStatus = "CNF";
+      let pQueue = 0;
+      
+      if (existingSeatsBooked <= MAX_CNF) {
+        pStatus = "CNF";
+      } else if (existingSeatsBooked <= MAX_CNF + MAX_RAC) {
+        pStatus = "RAC";
+        pQueue = existingSeatsBooked - MAX_CNF;
+      } else {
+        pStatus = "WL";
+        pQueue = existingSeatsBooked - (MAX_CNF + MAX_RAC);
+      }
+      
+      let allocatedCoach = "N/A";
+      let allocatedSeat = 0;
+      let allocatedBerthType = "No Berth";
+      
+      if (pStatus === "CNF") {
+        let coachPrefix = "S";
+        if (seatClass === "1A") coachPrefix = "H";
+        else if (seatClass === "2A") coachPrefix = "A";
+        else if (seatClass === "3A") coachPrefix = "B";
+        else if (seatClass === "CC") coachPrefix = "C";
+        
+        allocatedCoach = `${coachPrefix}1`;
+        allocatedSeat = existingSeatsBooked; // Sequential filling
+        
+        allocatedBerthType = getBerthType(allocatedSeat);
+        if ((p.isSeniorCitizen || p.isDisabled) && p.berthPreference === "Lower") {
+          allocatedBerthType = "Lower"; // Engine override
+        }
+      } else if (pStatus === "RAC") {
+        allocatedCoach = "RAC";
+        allocatedSeat = pQueue;
+        allocatedBerthType = "Side Lower (Shared)";
+      }
+      
+      return {
+        ...p,
+        allocatedCoach,
+        allocatedSeat,
+        allocatedBerthType,
+        bookingStatus: pStatus,
+        currentStatus: pStatus,
+        queuePosition: pQueue
+      };
+    });
+
+    let overallStatus = "CONFIRMED";
+    if (passengers.some((p:any) => p.currentStatus === "WL")) overallStatus = "WL";
+    else if (passengers.some((p:any) => p.currentStatus === "RAC")) overallStatus = "RAC";
 
     const pnr = Math.random().toString(36).substring(2, 12).toUpperCase();
 
@@ -130,10 +145,28 @@ export async function createBooking(formData: FormData) {
       fareDetails,
       pricePaid,
       journeyDate,
-      status: bookingStatus,
+      status: overallStatus,
       paymentStatus: "PENDING",
       emergencyContact
     });
+
+    // Update Seat Inventory so the Search UI reflects capacity correctly
+    if (inventory) {
+      let cnfBooked = 0;
+      let racBooked = 0;
+      let wlBooked = 0;
+      passengers.forEach((p: any) => {
+        if (p.isInfant && Number(p.age) < 5) return;
+        if (p.currentStatus === "CNF") cnfBooked++;
+        else if (p.currentStatus === "RAC") racBooked++;
+        else if (p.currentStatus === "WL") wlBooked++;
+      });
+
+      inventory.availableSeats = Math.max(0, inventory.availableSeats - cnfBooked);
+      inventory.racCount += racBooked;
+      inventory.wlCount += wlBooked;
+      await inventory.save();
+    }
 
     revalidatePath("/bookings");
     return { success: true, pnr, bookingId: newBooking._id.toString() };
@@ -203,18 +236,72 @@ export async function cancelBooking(bookingId: string) {
 
     const refundAmount = Math.max(0, booking.pricePaid - cancellationFee);
 
-    // Update Inventory
-    const inventory = await SeatInventory.findOne({
-      train: booking.trainId._id,
-      journeyDate: booking.journeyDate,
-      coachClass: booking.seatClass
+    // Auto-Confirmation Engine (Cascade Upgrades: WL -> RAC -> CNF)
+    let cnfFreed = 0;
+    let racFreed = 0;
+
+    booking.passengers.forEach((p: any) => {
+      if (!(p.isInfant && Number(p.age) < 5)) {
+        if (p.currentStatus === "CNF") cnfFreed++;
+        else if (p.currentStatus === "RAC") racFreed++;
+      }
+      p.currentStatus = "CANCELLED";
     });
 
-    if (inventory) {
-      if (booking.status === "CONFIRMED") inventory.availableSeats += numPassengers;
-      else if (booking.status === "RAC") inventory.racCount = Math.max(0, inventory.racCount - numPassengers);
-      else if (booking.status === "WL") inventory.wlCount = Math.max(0, inventory.wlCount - numPassengers);
-      await inventory.save();
+    if (cnfFreed > 0 || racFreed > 0) {
+      // Find all ACTIVE bookings for this train/date/class, ordered by ObjectId (which implies chronological order)
+      const activeBookings = await Booking.find({
+        trainId: booking.trainId._id,
+        seatClass: booking.seatClass,
+        journeyDate: booking.journeyDate,
+        status: { $ne: "CANCELLED" },
+        _id: { $ne: booking._id }
+      }).sort({ _id: 1 });
+
+      for (const b of activeBookings) {
+        let changed = false;
+        
+        // Phase 1: Promote RAC to CNF
+        b.passengers.forEach((p: any) => {
+          if (p.currentStatus === "RAC" && cnfFreed > 0) {
+            p.currentStatus = "CNF";
+            p.queuePosition = 0;
+            p.allocatedCoach = "S1"; // Mock reallocation
+            p.allocatedBerthType = "Lower (Upgraded)"; 
+            cnfFreed--;
+            racFreed++; // Upgrading an RAC frees up an RAC spot!
+            changed = true;
+          }
+        });
+        
+        // Phase 2: Promote WL to RAC
+        b.passengers.forEach((p: any) => {
+          if (p.currentStatus === "WL" && racFreed > 0) {
+            p.currentStatus = "RAC";
+            p.queuePosition = 0;
+            p.allocatedCoach = "RAC";
+            p.allocatedBerthType = "Side Lower (Shared)";
+            racFreed--;
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          // Re-evaluate overall booking status
+          let newOverall = "CONFIRMED";
+          if (b.passengers.some((p:any) => p.currentStatus === "WL")) newOverall = "WL";
+          else if (b.passengers.some((p:any) => p.currentStatus === "RAC")) newOverall = "RAC";
+          b.status = newOverall;
+          
+          await b.save();
+          
+          // Send automatic notification of ticket upgrade!
+          import("@/app/actions/comms").then(({ sendTicketSMS, sendTicketEmail }) => {
+            sendTicketSMS(b._id.toString()).catch(() => {});
+            sendTicketEmail(b._id.toString()).catch(() => {});
+          });
+        }
+      }
     }
 
     booking.status = "CANCELLED";
