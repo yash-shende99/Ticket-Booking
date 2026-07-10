@@ -163,8 +163,13 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
                     </div>
                   </div>
                   <div className="col-span-2 flex justify-between items-center border-t border-slate-100 pt-4 mt-2">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Amount Paid</p>
-                    <p className="font-black text-slate-900 text-lg">₹{booking.pricePaid}</p>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Amount Paid</p>
+                      <p className="font-black text-slate-900 text-lg">₹{booking.pricePaid}</p>
+                    </div>
+                    <Link href={`/bookings/${booking.pnr}`} className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors">
+                      View Details
+                    </Link>
                   </div>
                 </div>
               </div>

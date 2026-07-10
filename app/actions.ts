@@ -154,3 +154,84 @@ export async function confirmPayment(bookingId: string) {
   revalidatePath("/bookings");
   return { success: true };
 }
+
+export async function cancelBooking(bookingId: string) {
+  try {
+    await dbConnect();
+    const booking = await Booking.findById(bookingId).populate("trainId");
+    if (!booking) return { error: "Booking not found" };
+    if (booking.paymentStatus === "REFUNDED" || booking.status === "CANCELLED") {
+      return { error: "Booking already cancelled" };
+    }
+
+    const journeyDateTime = new Date(booking.journeyDate);
+    if (booking.trainId && booking.trainId.departureTime) {
+      const [hours, mins] = booking.trainId.departureTime.split(':').map(Number);
+      journeyDateTime.setHours(hours, mins, 0, 0);
+    }
+    
+    const hoursToDeparture = (journeyDateTime.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    const numPassengers = booking.passengers.filter((p: any) => !(p.isInfant && Number(p.age) < 5)).length;
+    
+    let cancellationFee = 0;
+
+    if (booking.status === "RAC" || booking.status === "WL") {
+      if (hoursToDeparture >= 0.5) {
+        cancellationFee = 60 * numPassengers;
+      } else {
+        cancellationFee = booking.pricePaid; // No refund
+      }
+    } else {
+      let flatCharge = 60;
+      if (booking.seatClass === "1A") flatCharge = 240;
+      else if (booking.seatClass === "2A") flatCharge = 200;
+      else if (booking.seatClass === "3A" || booking.seatClass === "CC") flatCharge = 180;
+      else if (booking.seatClass === "SL") flatCharge = 120;
+      
+      const minFlatFee = flatCharge * numPassengers;
+
+      if (hoursToDeparture > 72) {
+        cancellationFee = minFlatFee;
+      } else if (hoursToDeparture > 24) {
+        cancellationFee = Math.max(minFlatFee, booking.pricePaid * 0.25);
+      } else if (hoursToDeparture > 8) {
+        cancellationFee = Math.max(minFlatFee, booking.pricePaid * 0.50);
+      } else {
+        cancellationFee = booking.pricePaid;
+      }
+    }
+
+    const refundAmount = Math.max(0, booking.pricePaid - cancellationFee);
+
+    // Update Inventory
+    const inventory = await SeatInventory.findOne({
+      train: booking.trainId._id,
+      journeyDate: booking.journeyDate,
+      coachClass: booking.seatClass
+    });
+
+    if (inventory) {
+      if (booking.status === "CONFIRMED") inventory.availableSeats += numPassengers;
+      else if (booking.status === "RAC") inventory.racCount = Math.max(0, inventory.racCount - numPassengers);
+      else if (booking.status === "WL") inventory.wlCount = Math.max(0, inventory.wlCount - numPassengers);
+      await inventory.save();
+    }
+
+    booking.status = "CANCELLED";
+    booking.paymentStatus = "REFUNDED";
+    booking.fareDetails = {
+      ...booking.fareDetails,
+      cancellationFee,
+      refundAmount
+    };
+
+    await booking.save();
+    revalidatePath(`/bookings/${booking.pnr}`);
+    revalidatePath("/profile/payments");
+    
+    return { success: true, refundAmount, cancellationFee };
+  } catch (error: any) {
+    console.error("Error cancelling booking:", error);
+    return { error: "Failed to cancel booking" };
+  }
+}
