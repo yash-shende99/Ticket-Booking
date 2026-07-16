@@ -49,7 +49,7 @@ export async function createBooking(formData: FormData) {
     const inventory = await SeatInventory.findOne({
       train: train._id,
       journeyDate,
-      coachClass: seatClass
+      coachClass: seatClass as any
     });
 
     // Use actual DB config if available, otherwise strict 5-5 for demo safety
@@ -65,11 +65,11 @@ export async function createBooking(formData: FormData) {
     
     let existingSeatsBooked = 0;
     existingBookings.forEach(b => {
-      existingSeatsBooked += b.passengers.filter((p:any) => !(p.isInfant && p.age < 5)).length;
+      existingSeatsBooked += b.passengers.filter((p:any) => Number(p.age) >= 5).length;
     });
 
     passengers = passengers.map((p: any) => {
-      if (p.isInfant && Number(p.age) < 5) {
+      if (Number(p.age) < 5) {
         return { 
           ...p, 
           allocatedCoach: "N/A", 
@@ -198,8 +198,9 @@ export async function cancelBooking(bookingId: string) {
     }
 
     const journeyDateTime = new Date(booking.journeyDate);
-    if (booking.trainId && booking.trainId.departureTime) {
-      const [hours, mins] = booking.trainId.departureTime.split(':').map(Number);
+    const populatedTrain: any = booking.trainId;
+    if (populatedTrain && populatedTrain.departureTime) {
+      const [hours, mins] = populatedTrain.departureTime.split(':').map(Number);
       journeyDateTime.setHours(hours, mins, 0, 0);
     }
     
@@ -310,9 +311,41 @@ export async function cancelBooking(bookingId: string) {
       ...booking.fareDetails,
       cancellationFee,
       refundAmount
-    };
+    } as any;
 
     await booking.save();
+
+    // INDUSTRIAL SYNC: Recalculate SeatInventory cache perfectly
+    const inventory = await SeatInventory.findOne({
+      train: (booking.trainId as any)._id || booking.trainId,
+      coachClass: booking.seatClass as any,
+      journeyDate: booking.journeyDate
+    });
+    
+    if (inventory) {
+      const allActive = await Booking.find({
+        trainId: booking.trainId._id,
+        seatClass: booking.seatClass,
+        journeyDate: booking.journeyDate,
+        status: { $ne: "CANCELLED" }
+      });
+      
+      let totalCnf = 0; let totalRac = 0; let totalWl = 0;
+      allActive.forEach(b => {
+        b.passengers.forEach((p:any) => {
+          if (Number(p.age) < 5) return;
+          if (p.currentStatus === "CNF") totalCnf++;
+          if (p.currentStatus === "RAC") totalRac++;
+          if (p.currentStatus === "WL") totalWl++;
+        });
+      });
+      
+      inventory.availableSeats = Math.max(0, inventory.totalSeats - totalCnf);
+      inventory.racCount = totalRac;
+      inventory.wlCount = totalWl;
+      await inventory.save();
+    }
+
     revalidatePath(`/bookings/${booking.pnr}`);
     revalidatePath("/profile/payments");
     
