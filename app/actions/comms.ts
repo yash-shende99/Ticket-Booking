@@ -36,7 +36,7 @@ export async function sendTicketEmail(bookingId: string) {
       },
     });
 
-    const train = booking.trainId;
+    const train: any = booking.trainId;
 
     const emailContent = `
       <h1>RailConnect E-Ticket</h1>
@@ -89,7 +89,7 @@ export async function sendTicketSMS(bookingId: string) {
     }
 
     const client = twilio(twilioSid, twilioToken);
-    const train = booking.trainId;
+    const train: any = booking.trainId;
 
     const messageBody = `RailConnect: Your ticket is confirmed. PNR: ${booking.pnr}. Train: ${train.trainNumber}. Date: ${new Date(booking.journeyDate).toDateString()}. Passengers: ${booking.passengers.length}. Happy Journey!`;
 
