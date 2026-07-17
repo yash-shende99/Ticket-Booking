@@ -5,10 +5,35 @@
   --color-primary-dark: #1e3a8a;
   --color-background: #f8fafc;
   --color-surface: #ffffff;
+  
+  --animate-marquee: marquee 25s linear infinite;
+  
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  --animate-bg-scroll: bg-scroll 60s linear infinite;
+  
+  @keyframes bg-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
 }
 
 @layer base {
-  body {
+  html, body {
     @apply bg-background text-slate-900 antialiased;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+}
+
+@layer utilities {
+  .pause-marquee:hover {
+    animation-play-state: paused;
   }
 }
