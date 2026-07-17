@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBooking } from "@/app/actions";
+import { validateCoupon } from "@/app/actions/coupon";
+import toast from "react-hot-toast";
 
 export default function BookingForm({ 
   train, 
@@ -30,9 +32,18 @@ export default function BookingForm({
   ]);
   const [emergencyContact, setEmergencyContact] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key:number]: string}>({});
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string; discountAmount: number; discountPercentage: number; maxDiscount: number} | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const addPassenger = () => {
-    if (passengers.length >= 6) return alert("Maximum 6 passengers allowed per booking.");
+    if (passengers.length >= 6) {
+      toast.error("Maximum 6 passengers allowed per booking.");
+      return;
+    }
     setPassengers([...passengers, {
       name: "", age: "", gender: "Male", nationality: "Indian",
       idType: "Aadhaar", idNumber: "", mealPreference: "None", berthPreference: "No Preference",
@@ -49,7 +60,51 @@ export default function BookingForm({
 
   const updatePassenger = (index: number, field: string, value: any) => {
     const newPass = [...passengers];
-    (newPass[index] as any)[field] = value;
+    const p = newPass[index];
+    
+    // Clear errors when updating fields
+    const newErrors = { ...errors };
+    delete newErrors[index];
+    setErrors(newErrors);
+
+    if (field === 'isSeniorCitizen' && value === true) {
+      const age = Number(p.age);
+      if (p.gender === 'Male' && age < 60) {
+        setErrors({ ...errors, [index]: 'Male Senior Citizens must be 60 or above.' });
+        return;
+      }
+      if ((p.gender === 'Female' || p.gender === 'Transgender') && age < 58) {
+        setErrors({ ...errors, [index]: 'Female/Transgender Senior Citizens must be 58 or above.' });
+        return;
+      }
+      p.isSeniorCitizen = true;
+      p.isStudent = false;
+      p.isDisabled = false;
+      p.isInfant = false;
+    } else if (field === 'isInfant' && value === true) {
+      const age = Number(p.age);
+      if (age >= 5 || !p.age) {
+        setErrors({ ...errors, [index]: 'Infants must be under 5 years old.' });
+        return;
+      }
+      p.isInfant = true;
+      p.isSeniorCitizen = false;
+      p.isStudent = false;
+      p.isDisabled = false;
+    } else if (field === 'isStudent' && value === true) {
+      p.isStudent = true;
+      p.isSeniorCitizen = false;
+      p.isDisabled = false;
+      p.isInfant = false;
+    } else if (field === 'isDisabled' && value === true) {
+      p.isDisabled = true;
+      p.isSeniorCitizen = false;
+      p.isStudent = false;
+      p.isInfant = false;
+    } else {
+      (p as any)[field] = value;
+    }
+    
     setPassengers(newPass);
   };
 
@@ -62,13 +117,14 @@ export default function BookingForm({
   let discount = 0;
   
   passengers.forEach(p => {
-    if (p.isInfant && Number(p.age) < 5) {
+    const age = Number(p.age);
+    if (p.age && age < 5) {
       // Infants travel free
       baseFare += 0;
     } else {
       baseFare += basePricePerSeat;
       // Calculate discounts
-      if (p.isSeniorCitizen && Number(p.age) >= 60) {
+      if (p.isSeniorCitizen && age >= 60) {
         discount += basePricePerSeat * 0.40; // 40% off
       } else if (p.isStudent) {
         discount += basePricePerSeat * 0.20; // 20% off
@@ -78,10 +134,35 @@ export default function BookingForm({
     }
   });
 
-  const reservationCharges = passengers.filter(p => !(p.isInfant && Number(p.age) < 5)).length * 40;
+  const reservationCharges = passengers.filter(p => !(p.age && Number(p.age) < 5)).length * 40;
   const gst = baseFare * 0.05; // 5% GST on base fare
   const convenienceFee = 35; // Flat fee
-  const totalFare = Math.max(0, baseFare + reservationCharges + gst + convenienceFee - discount);
+  const couponDiscount = appliedCoupon?.discountAmount || 0;
+  const totalFare = Math.max(0, baseFare + reservationCharges + gst + convenienceFee - discount - couponDiscount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code.");
+      return;
+    }
+    setCouponLoading(true);
+    const subtotal = baseFare + reservationCharges + gst + convenienceFee - discount;
+    const res = await validateCoupon(couponCode, subtotal);
+    if (res.error) {
+      toast.error(res.error);
+      setAppliedCoupon(null);
+    } else {
+      setAppliedCoupon({ code: res.code!, discountAmount: res.discountAmount!, discountPercentage: res.discountPercentage!, maxDiscount: res.maxDiscount! });
+      toast.success(`Coupon "${res.code}" applied! You save ₹${res.discountAmount!.toFixed(0)}`);
+    }
+    setCouponLoading(false);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    toast.success("Coupon removed.");
+  };
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -104,20 +185,21 @@ export default function BookingForm({
     // Validate
     const invalidAge = passengers.find(p => !p.age || Number(p.age) <= 0);
     if (invalidAge) {
-      alert("Please enter valid ages for all passengers.");
+      toast.error("Please enter valid ages for all passengers.");
       setLoading(false);
       return;
     }
     const invalidName = passengers.find(p => !p.name || p.name.length < 2);
     if (invalidName) {
-      alert("Please enter valid names for all passengers.");
+      toast.error("Please enter valid names for all passengers.");
       setLoading(false);
       return;
     }
+    // specific validations handled inline during checkbox click
 
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) {
-      alert("Failed to load Razorpay SDK. Please check your connection.");
+      toast.error("Failed to load Razorpay SDK. Please check your connection.");
       setLoading(false);
       return;
     }
@@ -128,21 +210,22 @@ export default function BookingForm({
     
     // Serialize complex data
     formData.append("passengers", JSON.stringify(passengers));
-    formData.append("fareDetails", JSON.stringify({ baseFare, reservationCharges, gst, convenienceFee, discount, totalFare }));
+    formData.append("fareDetails", JSON.stringify({ baseFare, reservationCharges, gst, convenienceFee, discount: discount + couponDiscount, totalFare }));
     formData.append("pricePaid", totalFare.toString());
+    if (appliedCoupon) formData.append("couponCode", appliedCoupon.code);
     if (emergencyContact) formData.append("emergencyContact", emergencyContact);
     
     try {
       const res = await createBooking(formData);
       if (res?.error) {
-        alert(res.error);
+        toast.error(res.error);
         setLoading(false);
         return;
       } 
       
       const bookingId = res?.bookingId;
       if (!bookingId) {
-         alert("Failed to secure booking.");
+         toast.error("Failed to secure booking.");
          setLoading(false);
          return;
       }
@@ -156,7 +239,7 @@ export default function BookingForm({
       const orderData = await orderRes.json();
       
       if (!orderData.success) {
-        alert(orderData.error || "Failed to create order");
+        toast.error(orderData.error || "Failed to create order");
         setLoading(false);
         return;
       }
@@ -176,17 +259,18 @@ export default function BookingForm({
              const { confirmPayment } = await import("@/app/actions");
              const confirmRes = await confirmPayment(bookingId);
              if (confirmRes?.error) {
-               alert(confirmRes.error);
+               toast.error(confirmRes.error);
              } else {
-               // Fire off email and SMS asynchronously (fire-and-forget)
-               import("@/app/actions/comms").then(({ sendTicketEmail, sendTicketSMS }) => {
-                 sendTicketEmail(bookingId).catch(console.error);
-                 sendTicketSMS(bookingId).catch(console.error);
-               });
+               // Fire off email and SMS and await them to prevent Next.js RSC payload conflicts
+               const { sendTicketEmail, sendTicketSMS } = await import("@/app/actions/comms");
+               await Promise.allSettled([
+                 sendTicketEmail(bookingId),
+                 sendTicketSMS(bookingId)
+               ]);
                router.push(`/bookings/${res.pnr}`);
              }
            } catch(e) {
-             alert("Error confirming ticket after payment.");
+             toast.error("Error confirming ticket after payment.");
            }
            setLoading(false);
         },
@@ -202,13 +286,13 @@ export default function BookingForm({
       const rzp = new (window as any).Razorpay(options);
       
       rzp.on("payment.failed", function (response: any) {
-        alert("Payment Failed! Reason: " + response.error.description);
+        toast.error("Payment Failed! Reason: " + response.error.description);
       });
 
       rzp.open();
 
     } catch (error) {
-      alert("Failed to book ticket. Please try again.");
+      toast.error("Failed to book ticket. Please try again.");
       setLoading(false);
     }
   };
@@ -290,23 +374,30 @@ export default function BookingForm({
                   </div>
                   
                   {/* Quotas & Concessions */}
-                  <div className="flex flex-wrap gap-4 mt-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
-                      <input type="checkbox" checked={p.isSeniorCitizen} onChange={(e) => updatePassenger(idx, "isSeniorCitizen", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
-                      Senior Citizen Quota
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
-                      <input type="checkbox" checked={p.isStudent} onChange={(e) => updatePassenger(idx, "isStudent", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
-                      Student Concession
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
-                      <input type="checkbox" checked={p.isDisabled} onChange={(e) => updatePassenger(idx, "isDisabled", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
-                      Disabled Quota
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
-                      <input type="checkbox" checked={p.isInfant} onChange={(e) => updatePassenger(idx, "isInfant", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
-                      Infant (No Berth)
-                    </label>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
+                        <input type="checkbox" checked={p.isSeniorCitizen} onChange={(e) => updatePassenger(idx, "isSeniorCitizen", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
+                        Senior Citizen Quota
+                      </label>
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
+                        <input type="checkbox" checked={p.isStudent} onChange={(e) => updatePassenger(idx, "isStudent", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
+                        Student Concession
+                      </label>
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
+                        <input type="checkbox" checked={p.isDisabled} onChange={(e) => updatePassenger(idx, "isDisabled", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
+                        Disabled Quota
+                      </label>
+                      <label className="flex items-center gap-2 text-sm font-medium text-slate-600 cursor-pointer">
+                        <input type="checkbox" checked={p.isInfant} onChange={(e) => updatePassenger(idx, "isInfant", e.target.checked)} className="rounded text-slate-900 focus:ring-slate-900" />
+                        Infant (No Berth)
+                      </label>
+                    </div>
+                    {errors[idx] && (
+                      <div className="text-red-500 text-sm font-bold mt-1">
+                        {errors[idx]}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -357,8 +448,50 @@ export default function BookingForm({
                 <span>- ₹{discount.toFixed(2)}</span>
               </div>
             )}
+            {couponDiscount > 0 && (
+              <div className="flex justify-between text-yellow-400 text-sm font-bold">
+                <span>🎟️ Coupon ({appliedCoupon?.code})</span>
+                <span>- ₹{couponDiscount.toFixed(2)}</span>
+              </div>
+            )}
           </div>
           
+          {/* Coupon Code Input */}
+          <div className="mb-4 relative z-10 border-t border-white/10 pt-4">
+            <p className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">🏷️ Have a promo code?</p>
+            {!appliedCoupon ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                  placeholder="Promo code"
+                  className="flex-1 bg-white/10 border border-white/20 text-white placeholder-white/40 px-3 py-2.5 rounded-xl text-sm font-bold focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={couponLoading}
+                  className="bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-black px-4 py-2 rounded-xl text-sm transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {couponLoading ? "..." : "Apply"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-yellow-400/10 border border-yellow-400/30 px-3 py-2.5 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 text-lg">🎟️</span>
+                  <div>
+                    <p className="text-yellow-400 font-black text-sm">{appliedCoupon.code}</p>
+                    <p className="text-white/50 text-[10px] font-bold">{appliedCoupon.discountPercentage}% off · max ₹{appliedCoupon.maxDiscount}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={handleRemoveCoupon} className="text-white/40 hover:text-white text-xs font-bold transition-colors">✕ Remove</button>
+              </div>
+            )}
+          </div>
+
           <div className="border-t border-white/10 pt-4 mb-6 relative z-10">
             <div className="flex justify-between items-end">
               <span className="text-white/70 font-medium">Total Amount</span>
