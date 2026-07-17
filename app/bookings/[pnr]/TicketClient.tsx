@@ -224,6 +224,9 @@ export default function TicketClient({ booking }: { booking: any }) {
                   if (p.currentStatus === "CANCELLED") {
                     statusColor = "text-red-600";
                     displayStatus = "CANCELLED";
+                  } else if (p.isInfant && Number(p.age) < 5) {
+                    statusColor = "text-slate-400";
+                    displayStatus = "INFANT";
                   } else if (p.currentStatus === "WL") {
                     statusColor = "text-orange-500";
                     displayStatus = `WL / ${p.queuePosition}`;
