@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function BookingsClient({ initialBookings }: { initialBookings: any[] }) {
   const [activeTab, setActiveTab] = useState<"UPCOMING" | "COMPLETED" | "CANCELLED">("UPCOMING");
@@ -34,7 +35,7 @@ export default function BookingsClient({ initialBookings }: { initialBookings: a
       }
     } else {
       navigator.clipboard.writeText(url);
-      alert("Ticket link copied to clipboard!");
+      toast.success("Ticket link copied to clipboard!");
     }
   };
 
