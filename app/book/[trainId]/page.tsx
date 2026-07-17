@@ -11,7 +11,7 @@ export default async function BookTrainPage({
   searchParams 
 }: { 
   params: Promise<{ trainId: string }>;
-  searchParams: Promise<{ date: string; class: string }>;
+  searchParams: Promise<{ date: string; class: string; source?: string; dest?: string }>;
 }) {
   await dbConnect();
   
@@ -39,12 +39,13 @@ export default async function BookTrainPage({
     return <div>Train not found in database.</div>;
   }
 
-  let sourceObj = train.route.stations[0];
-  let destObj = train.route.stations[train.route.stations.length - 1];
+  const route: any = train.route;
+  let sourceObj = route.stations[0];
+  let destObj = route.stations[route.stations.length - 1];
 
   if (source && dest) {
-    const s = train.route.stations.find((s:any) => s.station._id.toString() === source);
-    const d = train.route.stations.find((s:any) => s.station._id.toString() === dest);
+    const s = route.stations.find((s:any) => s.station && s.station._id.toString() === source);
+    const d = route.stations.find((s:any) => s.station && s.station._id.toString() === dest);
     if (s && d) {
       sourceObj = s;
       destObj = d;
