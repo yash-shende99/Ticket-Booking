@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { confirmPayment } from "@/app/actions";
+import toast from "react-hot-toast";
 
 export default function PaymentGatewayClient({ booking }: { booking: any }) {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          alert("Payment session expired!");
+          toast.error("Payment session expired!");
           router.push("/");
           return 0;
         }
@@ -50,7 +51,7 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
       setLoading(true);
       setProcessingState("Connecting to Bank...");
       await new Promise(r => setTimeout(r, 1500));
-      alert("Payment Failed! Bank rejected the transaction (Simulated Failure).");
+      toast.error("Payment Failed! Bank rejected the transaction (Simulated Failure).");
       setLoading(false);
       return;
     }
@@ -60,7 +61,7 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
     
     const isLoaded = await loadRazorpayScript();
     if (!isLoaded) {
-      alert("Failed to load Razorpay SDK. Please check your connection.");
+      toast.error("Failed to load Razorpay SDK. Please check your connection.");
       setLoading(false);
       return;
     }
@@ -74,7 +75,7 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
       const orderData = await res.json();
       
       if (!orderData.success) {
-        alert(orderData.error || "Failed to create order");
+        toast.error(orderData.error || "Failed to create order");
         setLoading(false);
         return;
       }
@@ -94,18 +95,18 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
            try {
              const confirmRes = await confirmPayment(booking._id);
              if (confirmRes?.error) {
-               alert(confirmRes.error);
+               toast.error(confirmRes.error);
              } else {
                router.push(`/bookings/${booking.pnr}`);
              }
            } catch(e) {
-             alert("Error confirming ticket after payment.");
+             toast.error("Error confirming ticket after payment.");
            }
            setLoading(false);
         },
         prefill: {
           name: "User",
-          email: "user@example.com",
+          email: booking.user?.email || "user@gmail.com",
           contact: "9999999999"
         },
         theme: {
@@ -116,13 +117,13 @@ export default function PaymentGatewayClient({ booking }: { booking: any }) {
       const rzp = new (window as any).Razorpay(options);
       
       rzp.on("payment.failed", function (response: any) {
-        alert("Payment Failed! Reason: " + response.error.description);
+        toast.error("Payment Failed! Reason: " + response.error.description);
       });
 
       rzp.open();
 
     } catch (err) {
-      alert("Payment initialization failed.");
+      toast.error("Payment initialization failed.");
       setLoading(false);
     }
   };
