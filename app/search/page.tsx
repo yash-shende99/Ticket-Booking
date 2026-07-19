@@ -81,7 +81,8 @@ export default async function SearchResultsPage({
 
   if (morning === "true") {
     filteredTrains = filteredTrains.filter(t => {
-      const depHour = parseInt(t.departureTime.split(":")[0]);
+      if (!t.departureTime || typeof t.departureTime !== 'string') return false;
+      const depHour = parseInt((t as any).departureTime.split(":")[0]);
       return depHour >= 6 && depHour < 12;
     });
   }
