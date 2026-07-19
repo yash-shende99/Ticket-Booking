@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface Station {
   _id: string;
@@ -68,7 +69,7 @@ export default function TrainSearch() {
 
   const handleSearch = () => {
     if (!fromStation || !toStation) {
-      alert("Please select valid source and destination stations from the dropdown.");
+      toast.error("Please select valid source and destination stations from the dropdown.");
       return;
     }
 
@@ -107,7 +108,7 @@ export default function TrainSearch() {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-6 shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white max-w-5xl mx-auto mb-12">
+    <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-8 shadow-[0_8px_40px_rgb(0,0,0,0.06)] border border-white max-w-6xl mx-auto mb-12 overflow-hidden">
       
       {/* Top Row: Core Search */}
       <div className="flex flex-col lg:flex-row items-center gap-4 mb-6">
