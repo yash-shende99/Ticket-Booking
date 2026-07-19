@@ -67,7 +67,7 @@ export default async function StatusPage({ searchParams }: { searchParams: Promi
             {train.name}
             <span className="bg-slate-100 text-slate-600 text-sm px-3 py-1 rounded-md">{train.trainNumber}</span>
           </h1>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mt-1">{train.route.source.name} → {train.route.destination.name}</p>
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mt-1">{(train.route as any).source.name} → {(train.route as any).destination.name}</p>
         </div>
       </div>
 
@@ -114,7 +114,7 @@ export default async function StatusPage({ searchParams }: { searchParams: Promi
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {train.route.stations.map((s: any, idx: number) => (
+              {(train.route as any).stations.map((s: any, idx: number) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-6 py-4 font-bold text-slate-900">
                     <div className="flex items-center gap-3">
