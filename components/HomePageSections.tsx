@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
-export default function HomePageSections({ popularRoutes }: { popularRoutes?: any[] }) {
+export default function HomePageSections({ popularRoutes, offers = [] }: { popularRoutes?: any[], offers?: any[] }) {
   const router = useRouter();
   const [recentSearches, setRecentSearches] = useState<any[]>([]);
 
@@ -118,6 +119,9 @@ export default function HomePageSections({ popularRoutes }: { popularRoutes?: an
                     </svg>
                   </div>
                   <h4 className="font-black text-lg relative z-10 w-2/3 leading-tight">{route.name}</h4>
+                  {route.bookings > 0 && (
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mt-1 relative z-10">{route.bookings} bookings</p>
+                  )}
                   <div className="mt-4 inline-block bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold relative z-10 hover:bg-white/30 transition-colors">Book Now</div>
                 </div>
               ))}
@@ -187,22 +191,35 @@ export default function HomePageSections({ popularRoutes }: { popularRoutes?: an
             <h3 className="text-xl font-black text-slate-900 tracking-tight">Offers & Deals</h3>
             <p className="text-sm font-medium text-slate-500 mt-1">Exclusive rewards just for you</p>
           </div>
-          <a href="#" className="text-sm font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-full transition-colors">View All</a>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { tag: "FESTIVE", title: "Flat 20% Off on AC Classes", desc: "Use code FEST20 on checkout. Valid till end of month.", color: "bg-[#111] text-white" },
-            { tag: "CASHBACK", title: "Get ₹500 Cashback", desc: "Book using RailConnect Pay and earn instant cashback.", color: "bg-blue-600 text-white" },
-            { tag: "NEW USER", title: "Zero Convenience Fee", desc: "Your first booking is completely free of platform charges.", color: "bg-amber-400 text-amber-950" }
-          ].map((offer, i) => (
-            <div key={i} className={`${offer.color} rounded-[2.5rem] p-8 shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1`}>
-              <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors"></div>
-              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-white/20 rounded-lg backdrop-blur-md inline-block mb-4 shadow-sm">{offer.tag}</span>
-              <h4 className="text-2xl font-black mb-3 leading-tight tracking-tight">{offer.title}</h4>
-              <p className="text-sm opacity-80 font-medium leading-relaxed">{offer.desc}</p>
-            </div>
-          ))}
+        <div className="overflow-hidden relative w-full -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex w-[max-content] animate-marquee pause-marquee gap-6 py-4">
+            {offers.length > 0 ? (
+              // Duplicate the array to create a seamless infinite loop
+              [...offers, ...offers, ...offers].map((offer, i) => {
+                const colors = [
+                  "bg-[#111] text-white",
+                  "bg-blue-600 text-white",
+                  "bg-amber-400 text-amber-950",
+                  "bg-emerald-500 text-white",
+                  "bg-purple-600 text-white"
+                ];
+                const color = colors[i % colors.length];
+                
+                return (
+                  <div key={i} className={`w-[320px] md:w-[400px] flex-shrink-0 ${color} rounded-[2.5rem] p-8 shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1`}>
+                    <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 bg-white/20 rounded-lg backdrop-blur-md inline-block mb-4 shadow-sm">{offer.tag}</span>
+                    <h4 className="text-2xl font-black mb-3 leading-tight tracking-tight">{offer.title}</h4>
+                    <p className="text-sm opacity-80 font-medium leading-relaxed line-clamp-2">{offer.desc}</p>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="text-slate-500 font-medium text-sm">No active offers at the moment.</div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -245,19 +262,19 @@ export default function HomePageSections({ popularRoutes }: { popularRoutes?: an
             </div>
             
             <div className="space-y-3 relative z-10">
-              <button className="w-full bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all group">
+              <button onClick={() => router.push('/faqs')} className="w-full bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all group">
                 <span className="font-bold">FAQs</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 group-hover:translate-x-1 transition-transform">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
               </button>
-              <button className="w-full bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all group">
+              <button onClick={() => router.push('/cancellation-rules')} className="w-full bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all group">
                 <span className="font-bold">Cancellation Rules</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 group-hover:translate-x-1 transition-transform">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
               </button>
-              <button className="w-full bg-blue-600 hover:bg-blue-500 border border-blue-400 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all shadow-lg group mt-6">
+              <button onClick={() => window.location.href = 'mailto:support@railconnect.com'} className="w-full bg-blue-600 hover:bg-blue-500 border border-blue-400 text-left px-6 py-4 rounded-2xl flex justify-between items-center transition-all shadow-lg group mt-6">
                 <span className="font-bold">Contact Support</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 group-hover:translate-x-1 transition-transform">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
