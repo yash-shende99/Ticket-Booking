@@ -8,6 +8,11 @@ export function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const isBookings = pathname?.startsWith('/bookings');
+  const isAdminRoute = pathname?.startsWith('/admin');
+
+  if (isAdminRoute) {
+    return null;
+  }
 
   return (
     <>
@@ -23,7 +28,9 @@ export function Navbar() {
             </div>
             
             <div className="flex items-center space-x-2 bg-white/20 border border-white/40 p-1 rounded-full">
-              <Link href="/" className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${!isBookings ? 'bg-[#1a1a1a] text-white' : 'text-slate-600 hover:text-slate-900'}`}>Explore</Link>
+              <Link href="/" className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${pathname === '/' ? 'bg-[#1a1a1a] text-white' : 'text-slate-600 hover:text-slate-900'}`}>Explore</Link>
+              <Link href="/schedule" className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${pathname?.startsWith('/schedule') ? 'bg-[#1a1a1a] text-white' : 'text-slate-600 hover:text-slate-900'}`}>Schedule</Link>
+              <Link href="/live-status" className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${pathname?.startsWith('/live-status') ? 'bg-emerald-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.3)]' : 'text-slate-600 hover:text-emerald-500 hover:bg-emerald-50'}`}>Live Status</Link>
               <Link href="/bookings" className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${isBookings ? 'bg-[#1a1a1a] text-white' : 'text-slate-600 hover:text-slate-900'}`}>My Tickets</Link>
             </div>
 
@@ -41,9 +48,7 @@ export function Navbar() {
                       <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-2">
                         <Link href="/profile" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl font-medium">Profile</Link>
                         <Link href="/profile/payments" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl font-medium">Payment History</Link>
-                        {(session.user as any)?.role === 'admin' && (
-                          <Link href="/admin" className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-xl font-bold">Admin Dashboard</Link>
-                        )}
+                        <Link href="/profile/notifications" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl font-medium">Notifications</Link>
                         <button onClick={() => signOut()} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl font-medium mt-1">Sign out</button>
                       </div>
                     </div>
