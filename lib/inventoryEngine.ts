@@ -18,7 +18,7 @@ export async function getSeatInventory(
   let inventory = await SeatInventory.findOne({
     train: trainId,
     journeyDate: normalizedDate,
-    coachClass
+    coachClass: coachClass as any
   }).lean();
 
   if (!inventory) {
@@ -32,7 +32,7 @@ export async function getSeatInventory(
         train: trainId,
         route: routeId,
         journeyDate: normalizedDate,
-        coachClass,
+        coachClass: coachClass as any,
         totalSeats: totalCapacity,
         availableSeats: totalCapacity,
         racSeats,
@@ -48,7 +48,7 @@ export async function getSeatInventory(
         inventory = await SeatInventory.findOne({
           train: trainId,
           journeyDate: normalizedDate,
-          coachClass
+          coachClass: coachClass as any
         }).lean();
       } else {
         throw e;
@@ -58,17 +58,18 @@ export async function getSeatInventory(
 
   // Calculate status
   let status = "AVAILABLE";
-  let count = inventory.availableSeats;
+  const inv: any = inventory || {};
+  let count = inv.availableSeats || 0;
   let color = "text-green-600 bg-green-50 border-green-200";
 
-  if (inventory.availableSeats === 0) {
-    if (inventory.racCount < inventory.racSeats) {
+  if (inv.availableSeats === 0) {
+    if (inv.racCount < inv.racSeats) {
       status = "RAC";
-      count = inventory.racCount + 1;
+      count = inv.racSeats - inv.racCount;
       color = "text-orange-600 bg-orange-50 border-orange-200";
-    } else if (inventory.wlCount < inventory.wlSeats) {
+    } else if (inv.wlCount < inv.wlSeats) {
       status = "WL";
-      count = inventory.wlCount + 1;
+      count = inv.wlCount + 1;
       color = "text-red-600 bg-red-50 border-red-200";
     } else {
       status = "REGRET";
@@ -77,5 +78,5 @@ export async function getSeatInventory(
     }
   }
 
-  return { ...inventory, status, count, color };
+  return { ...inv, status, count, color };
 }
