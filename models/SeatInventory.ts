@@ -4,7 +4,7 @@ export interface ISeatInventory extends Document {
   train: mongoose.Types.ObjectId;
   route: mongoose.Types.ObjectId;
   journeyDate: Date;
-  coachClass: '1A' | '2A' | '3A' | 'SL' | 'CC' | 'GN';
+  coachClass: '1A' | '2A' | '3A' | 'SL' | 'CC' | 'GN' | 'EC' | '2S';
   totalSeats: number;
   availableSeats: number;
   racSeats: number; // RAC capacity
@@ -18,7 +18,7 @@ const SeatInventorySchema: Schema = new Schema({
   train: { type: Schema.Types.ObjectId, ref: 'Train', required: true },
   route: { type: Schema.Types.ObjectId, ref: 'Route', required: true },
   journeyDate: { type: Date, required: true },
-  coachClass: { type: String, enum: ['1A', '2A', '3A', 'SL', 'CC', 'GN'], required: true },
+  coachClass: { type: String, enum: ['1A', '2A', '3A', 'SL', 'CC', 'GN', 'EC', '2S'], required: true },
   totalSeats: { type: Number, required: true },
   availableSeats: { type: Number, required: true },
   racSeats: { type: Number, default: 0 },
