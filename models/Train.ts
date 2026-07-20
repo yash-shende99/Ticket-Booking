@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITrainCoach {
-  coachClass: '1A' | '2A' | '3A' | 'SL' | 'CC' | 'GN';
+  coachClass: '1A' | '2A' | '3A' | 'SL' | 'CC' | 'GN' | 'EC' | '2S';
   capacity: number;
 }
 
@@ -17,7 +17,7 @@ export interface ITrain extends Document {
 }
 
 const TrainCoachSchema = new Schema({
-  coachClass: { type: String, enum: ['1A', '2A', '3A', 'SL', 'CC', 'GN'], required: true },
+  coachClass: { type: String, enum: ['1A', '2A', '3A', 'SL', 'CC', 'GN', 'EC', '2S'], required: true },
   capacity: { type: Number, required: true },
 }, { _id: false });
 
