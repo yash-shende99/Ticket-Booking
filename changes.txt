@@ -1,0 +1,105 @@
+Here are the Git commands you can execute daily over the next 10-12 days. 
+Just copy and paste the 2-3 commands listed under each day!
+
+### DAY 1: Foundation & README
+git add README.md
+git commit -m "docs: revamp README with modern interactive shields and tech stack"
+
+git add package.json package-lock.json
+git commit -m "chore: update core dependencies and lockfiles"
+
+git add app/globals.css app/layout.tsx app/page.tsx
+git commit -m "feat(ui): implement dynamic scrolling train background and hero padding"
+
+### DAY 2: Global Navigation
+git add components/Navbar.tsx
+git commit -m "style: polish primary navigation bar layout"
+
+git add components/MobileNav.tsx
+git commit -m "feat(ui): add mobile responsive navigation menu"
+
+git add components/AdminNavbar.tsx
+git commit -m "feat(admin): create isolated navigation for admin dashboard"
+
+### DAY 3: Search Engine Refinements
+git add components/TrainSearch.tsx
+git commit -m "fix(search): resolve container padding overlap and strict width limits"
+
+git add app/search/page.tsx
+git commit -m "fix(types): resolve strict TypeScript warnings on departure string parsing"
+
+git add components/HomePageSections.tsx
+git commit -m "style: enhance home page sections and layout consistency"
+
+### DAY 4: Core Engine & DB Models
+git add models/SeatInventory.ts models/Train.ts
+git commit -m "chore(db): update Mongoose schemas for Seat Inventory and Trains"
+
+git add lib/inventoryEngine.ts
+git commit -m "fix(engine): add strict null checks and typescript type-casting to inventory generation"
+
+git add lib/liveEngine.ts
+git commit -m "fix(engine): resolve implicit any declarations in live train tracking engine"
+
+### DAY 5: Authentication & User Management
+git add app/login/page.tsx
+git commit -m "feat(auth): polish user login interface"
+
+git add app/register/page.tsx
+git commit -m "feat(auth): polish user registration flow and validation"
+
+git add app/admin/users/
+git commit -m "feat(admin): build user management dashboard and client actions"
+
+### DAY 6: Admin Routing & Stations
+git add app/admin/stations/
+git commit -m "feat(admin): add station management and data tables"
+
+git add app/admin/routes/
+git commit -m "feat(admin): implement complete route builder and management interface"
+
+git add app/admin/trains/
+git commit -m "feat(admin): create train scheduling and management dashboard"
+
+### DAY 7: Admin Financials & Coupons
+git add app/admin/revenue/ app/admin/refunds/
+git commit -m "feat(admin): build revenue and strict refunds dashboard"
+
+git add models/Coupon.ts app/admin/coupons/ app/actions/coupon.ts
+git commit -m "feat(admin): add robust coupon creation and validation system"
+
+git add app/admin/page.tsx app/admin/layout.tsx app/admin/login/
+git commit -m "feat(admin): finalize secure admin entry and core layout shell"
+
+### DAY 8: Live Status & Booking Info
+git add app/live-status/
+git commit -m "feat(live): build real-time train tracking dashboard and maps"
+
+git add app/schedule/
+git commit -m "feat(schedule): implement comprehensive train scheduling tables"
+
+git add app/status/page.tsx
+git commit -m "fix(types): apply strict typing to nested mongoose population arrays"
+
+### DAY 9: Payments & User Dashboard
+git add app/payment/
+git commit -m "feat(payment): integrate client-side payment gateway component"
+
+git add app/bookings/
+git commit -m "feat(dashboard): enhance user bookings portal and ticket views"
+
+git add app/profile/notifications/ models/Notification.ts app/admin/notifications/
+git commit -m "feat(notifications): build full-stack notification and alerting system"
+
+### DAY 10: Final Rules, Scripts & Fixes
+git add app/cancellation-rules/ app/faqs/
+git commit -m "style: remove bounding boxes on cancellation and FAQ modules"
+
+git add app/book/
+git commit -m "fix(booking): patch strict type errors in search params and form inputs"
+
+git add app/actions.ts app/actions/comms.ts
+git commit -m "fix(api): heavily type-cast populated mongoose objects for production build safety"
+
+git add scripts/ components/Icons.tsx components/LayoutWrapper.tsx
+git commit -m "chore: include deployment scripts, layout wrappers, and final loose files"
