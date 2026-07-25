@@ -47,34 +47,74 @@ To experience the full system architecture, use the following pre-configured dem
 
 ```mermaid
 graph TD
-    %% Core Infrastructure
-    Client[Passenger / Admin Browser]
-    CDN[Vercel Edge Network]
-    Next[Next.js 15 Serverless Node]
-    DB[(MongoDB Atlas)]
-    
-    %% External Services
-    Razorpay[Razorpay Gateway]
-    Twilio[Twilio SMS API]
-    Email[NodeMailer SMTP]
-
-    %% Flow
-    Client -->|HTTPS Requests| CDN
-    CDN -->|Server Actions| Next
-    Next <-->|Mongoose ODM| DB
-    Next -->|Payment Intent| Razorpay
-    Next -->|Booking Alerts| Twilio
-    Next -->|E-Tickets| Email
-    
-    subgraph Core Engines
-        Booking[Atomic Booking Engine]
-        Routing[Route Distance Calculator]
-        Admin[Dashboard Analytics]
+    %% Core Client Layer
+    subgraph Frontend Client Layer
+        Passenger[Passenger UI - Next.js Client Components]
+        AdminUI[Admin Dashboard - React 19 UI]
+        State[React State & Hooks Pagination]
     end
+
+    %% Edge Network
+    CDN[Vercel Edge CDN & Static Assets]
+
+    %% Authentication Middleware Layer
+    subgraph Security & Auth
+        NextAuth[NextAuth.js JWT Provider]
+        Middleware[Edge Route Protection]
+    end
+
+    %% Core Application Server (Next.js 15)
+    subgraph Serverless Application Layer
+        RSC[React Server Components - SEO & Fast Load]
+        API[Serverless API Routes & Server Actions]
+        
+        %% Internal Engines
+        BookingEngine[Atomic Seat Allocation Engine]
+        DistanceEngine[Dynamic Fare & Routing Calculator]
+        RACEngine[RAC / Waitlist Progression Daemon]
+        ReportingEngine[Server-Side Data Aggregation]
+    end
+
+    %% Database & Persistence
+    subgraph Data Layer
+        DB[(MongoDB Atlas - Mongoose ODM)]
+        Indexes[TTL & Compound Indexes]
+    end
+
+    %% External Third-Party APIs
+    subgraph 3rd Party Integrations
+        Razorpay[Razorpay Payment Gateway]
+        Twilio[Twilio SMS Services]
+        Nodemailer[SMTP Email Provider]
+    end
+
+    %% Interaction Flow
+    Passenger <-->|Interactive State| State
+    Passenger -->|Search & Book| CDN
+    AdminUI -->|Paginated Requests| CDN
     
-    Next --- Booking
-    Next --- Routing
-    Next --- Admin
+    CDN -->|Validates Request| Middleware
+    Middleware -->|Verifies Token| NextAuth
+    Middleware -->|Authorized Requests| RSC
+    Middleware -->|Authorized Requests| API
+
+    %% Engine execution
+    API -->|Validates Transaction| BookingEngine
+    API -->|Calculates Fares| DistanceEngine
+    API -->|Manages Cancellations| RACEngine
+    RSC -->|Admin Dashboard Analytics| ReportingEngine
+
+    %% Database Operations
+    BookingEngine <-->|Atomic Locks / Transactions| DB
+    DistanceEngine <-->|Graph Traversal| DB
+    RACEngine <-->|Queue Shifts| DB
+    ReportingEngine <-->|Aggregate Pipelines| DB
+    DB --- Indexes
+
+    %% Third Party Communications
+    BookingEngine -->|Creates Orders| Razorpay
+    BookingEngine -->|Dispatches Alerts| Twilio
+    BookingEngine -->|Sends E-Tickets| Nodemailer
 ```
 
 ---
