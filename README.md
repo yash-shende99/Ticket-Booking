@@ -2,7 +2,7 @@
   <h1>🚆 RailConnect</h1>
   
   <a href="https://ticket-booking-ten-orpin.vercel.app">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=39FF14&center=true&vCenter=true&width=700&lines=Next-Generation+Railway+Ticketing;Highly+Scalable+Booking+Engine;Live+Train+Fleet+Management;Built+with+Next.js+15+%26+MongoDB;Glassmorphism+Inspired+UI" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=059669&center=true&vCenter=true&width=700&lines=Next-Generation+Railway+Ticketing;Highly+Scalable+Booking+Engine;Live+Train+Fleet+Management;Built+with+Next.js+15+%26+MongoDB;Glassmorphism+Inspired+UI" alt="Typing SVG" />
   </a>
   <br/>
   
