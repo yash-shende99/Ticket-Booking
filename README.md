@@ -85,54 +85,118 @@ graph TD
 
 ```mermaid
 erDiagram
-    USER ||--o{ BOOKING : makes
+    USER ||--o{ BOOKING : "places"
     USER {
         ObjectId _id PK
         String name
         String email
+        String password "Hashed"
         String role "user | admin"
     }
 
-    TRAIN ||--o{ BOOKING : has
-    TRAIN {
+    STATION ||--o{ ROUTE_STATION : "contains"
+    STATION {
         ObjectId _id PK
-        String trainNumber
         String name
-        ObjectId route FK
-        Object classes "Capacity & Pricing"
+        String code "Unique"
+        String city
+        String state
+        Number platforms
     }
 
-    ROUTE ||--o{ TRAIN : assigned_to
+    ROUTE ||--o{ ROUTE_STATION : "sequence_of"
     ROUTE {
         ObjectId _id PK
         String routeName
         ObjectId source FK
         ObjectId destination FK
-        Array stations "Sequence of stops"
     }
 
-    STATION {
+    ROUTE_STATION {
+        ObjectId station FK
+        Number distanceFromSource "in km"
+        Number haltDuration "in mins"
+        Number dayOffset "0, 1, 2"
+    }
+
+    ROUTE ||--o{ TRAIN : "assigned_to"
+    TRAIN {
         ObjectId _id PK
+        String trainNumber "Unique"
         String name
-        String code
-        String city
+        ObjectId route FK
+        String departureTime
+        Array runningDays "0-6"
+        Number basePricePerKm
+        Boolean isActive
     }
 
-    BOOKING ||--o{ PASSENGER : includes
+    TRAIN ||--o{ TRAIN_COACH : "consists_of"
+    TRAIN_COACH {
+        String coachClass "1A|2A|3A|SL|CC|GN|EC|2S"
+        Number capacity
+    }
+
+    TRAIN ||--o{ SEAT_INVENTORY : "schedules"
+    ROUTE ||--o{ SEAT_INVENTORY : "limits"
+    SEAT_INVENTORY {
+        ObjectId _id PK
+        ObjectId train FK
+        ObjectId route FK
+        Date journeyDate
+        String coachClass
+        Number totalSeats
+        Number availableSeats
+        Number racSeats
+        Number wlSeats
+        Number racCount
+        Number wlCount
+        Number baseFare
+    }
+
+    USER ||--o{ BOOKING : "makes"
+    TRAIN ||--o{ BOOKING : "hosts"
     BOOKING {
         ObjectId _id PK
-        String pnr
+        String pnr "Unique"
         ObjectId userId FK
         ObjectId trainId FK
+        String seatClass
+        Number pricePaid
+        Date journeyDate
         String status "CONFIRMED | CANCELLED"
-        Number totalFare
+        String paymentStatus "PENDING | SUCCESS"
+        Object fareDetails
+        String emergencyContact
+    }
+
+    BOOKING ||--o{ PASSENGER : "includes"
+    PASSENGER {
+        String name
+        Number age
+        String gender
+        String berthPreference
+        String allocatedCoach
+        Number allocatedSeat
+        String bookingStatus "CNF | RAC | WL"
+        String currentStatus
+        Number queuePosition
     }
 
     COUPON {
         ObjectId _id PK
-        String code
+        String code "Unique"
         Number discountPercentage
         Number maxDiscount
+        Date validUntil
+        Boolean isActive
+    }
+
+    NOTIFICATION {
+        ObjectId _id PK
+        String title
+        String message
+        String type "INFO | ALERT | PROMO"
         Boolean isActive
     }
 ```
