@@ -9,6 +9,9 @@ import { Station } from "@/models/Station";
 import { Coupon } from "@/models/Coupon";
 import mongoose from "mongoose";
 
+export const revalidate = 60; // Revalidate every 60 seconds on Vercel
+
+
 export default async function Home() {
   await dbConnect();
   
