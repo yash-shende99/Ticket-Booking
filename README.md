@@ -1,8 +1,12 @@
 <div align="center">
   <h1>🚆 RailConnect</h1>
-  <p><strong>Next-Generation Railway Ticketing & Fleet Management Ecosystem</strong></p>
   
-  [![Live Demo](https://img.shields.io/badge/Live_Portal-Access_Now-10B981?style=for-the-badge&logo=vercel)](https://ticket-booking-ten-orpin.vercel.app)
+  <a href="https://ticket-booking-ten-orpin.vercel.app">
+    <img src="https://readme-typing-svg.demolab.com?font=Inter&weight=700&size=24&pause=1000&color=10B981&center=true&vCenter=true&width=700&lines=Next-Generation+Railway+Ticketing;Highly+Scalable+Booking+Engine;Live+Train+Fleet+Management;Built+with+Next.js+15+%26+MongoDB;Glassmorphism+Inspired+UI" alt="Typing SVG" />
+  </a>
+  <br/>
+  
+  [![Live Demo](https://img.shields.io/badge/Live_Portal-Access_Now-10B981?style=for-the-badge&logo=vercel&logoColor=white)](https://ticket-booking-ten-orpin.vercel.app)
   
   ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
   ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
@@ -10,6 +14,9 @@
   ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb)
   ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
   ![Razorpay](https://img.shields.io/badge/Razorpay-Payment-02042B?style=for-the-badge&logo=razorpay)
+
+  <br/>
+  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" width="100%">
 </div>
 
 <br/>
