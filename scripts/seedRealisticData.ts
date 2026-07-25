@@ -22,8 +22,8 @@ const run = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log("Connected successfully.");
 
-    console.log("Clearing existing sample data (keeping admin user)...");
-    await User.deleteMany({ role: "user" });
+    console.log("Clearing existing sample data (keeping admin user and recruiter user)...");
+    await User.deleteMany({ role: "user", email: { $ne: "hvdpvd4@gmail.com" } });
     await Station.deleteMany({});
     await Route.deleteMany({});
     await Train.deleteMany({});
@@ -33,20 +33,24 @@ const run = async () => {
     console.log("Creating realistic users...");
     const userNames = [
       "Rahul Sharma", "Priya Patel", "Amit Kumar", "Sneha Desai", "Vikram Singh",
-      "Anjali Gupta", "Ravi Verma", "Kavita Reddy", "Arjun Nair", "Neha Joshi",
-      "Suresh Iyer", "Meera Menon", "Karan Chawla", "Pooja Bhatia", "Manoj Tiwari"
+      "Kavita Reddy", "Arjun Nair", "Meera Menon", "Suresh Iyer", "Anjali Gupta",
+      "Karan Chawla", "Neha Joshi", "Ravi Verma", "Pooja Bhatia", "Manoj Tiwari"
     ];
+    
+    // Hash passwords for seeded users so they can actually log in
+    const bcrypt = require('bcryptjs');
+    const hash = await bcrypt.hash("password123", 10);
     
     const usersData = userNames.map((name, i) => ({
       name,
       email: `${name.toLowerCase().replace(' ', '.')}@gmail.com`,
-      password: "password123",
+      password: hash,
       role: "user"
     }));
     
     const users = await User.insertMany(usersData);
 
-    console.log("Creating 20+ Major Stations across India...");
+    console.log("Creating Indian Railway Stations...");
     const stationData = [
       { name: "New Delhi", code: "NDLS", city: "Delhi", state: "Delhi" },
       { name: "Mumbai Central", code: "MMCT", city: "Mumbai", state: "Maharashtra" },
@@ -211,9 +215,9 @@ const run = async () => {
     
     const trains = await Train.insertMany(trainsData);
 
-    console.log("Creating Massive Seat Inventory across 7 Days...");
+    console.log("Creating Massive Seat Inventory across 12 Days...");
     const inventoryData = [];
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    for (let dayOffset = 0; dayOffset <= 12; dayOffset++) {
       const journeyDate = new Date();
       journeyDate.setDate(journeyDate.getDate() + dayOffset);
       journeyDate.setHours(0, 0, 0, 0);
