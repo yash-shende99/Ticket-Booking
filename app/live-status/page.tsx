@@ -1,12 +1,21 @@
 import dbConnect from "@/lib/db";
 import { Train } from "@/models/Train";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
 
 export const dynamic = 'force-dynamic';
 
-export default async function LiveStatusIndexPage() {
+export default async function LiveStatusIndexPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   await dbConnect();
+  
+  const { page: pageStr } = await searchParams;
+  const page = parseInt(pageStr || "1");
+  const limit = 8;
+
   const trains = await Train.find({ isActive: true }).sort({ name: 1 }).lean();
+  
+  const totalPages = Math.ceil(trains.length / limit);
+  const trainsToDisplay = trains.slice((page - 1) * limit, page * limit);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
@@ -16,7 +25,7 @@ export default async function LiveStatusIndexPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {trains.map(train => (
+        {trainsToDisplay.map((train: any) => (
           <Link 
             key={train._id.toString()} 
             href={`/live-status/${train._id.toString()}`}
@@ -41,6 +50,8 @@ export default async function LiveStatusIndexPage() {
           </Link>
         ))}
       </div>
+      
+      <Pagination currentPage={page} totalPages={totalPages} />
     </div>
   );
 }

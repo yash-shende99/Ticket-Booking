@@ -1,11 +1,20 @@
 import dbConnect from "@/lib/db";
 import { Booking } from "@/models/Booking";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
 
-export default async function PaymentHistoryPage() {
+export default async function PaymentHistoryPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   await dbConnect();
+  
+  const { page: pageStr } = await searchParams;
+  const page = parseInt(pageStr || "1");
+  const limit = 10;
+  
   // Fetch all bookings for simulation (normally filtered by userId)
   const bookings = await Booking.find().populate("trainId").sort({ createdAt: -1 }).lean();
+  
+  const totalPages = Math.ceil(bookings.length / limit);
+  const bookingsToDisplay = bookings.slice((page - 1) * limit, page * limit);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pt-8">
@@ -30,7 +39,7 @@ export default async function PaymentHistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {bookings.map((b: any) => (
+              {bookingsToDisplay.map((b: any) => (
                 <tr key={b._id.toString()} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-4 pl-6">
                     <p className="font-bold text-slate-900">{b.pnr}</p>
@@ -74,7 +83,7 @@ export default async function PaymentHistoryPage() {
                   </td>
                 </tr>
               ))}
-              {bookings.length === 0 && (
+              {bookingsToDisplay.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-500 font-medium">No transactions found.</td>
                 </tr>
@@ -83,6 +92,8 @@ export default async function PaymentHistoryPage() {
           </table>
         </div>
       </div>
+      
+      <Pagination currentPage={page} totalPages={totalPages} />
     </div>
   );
 }

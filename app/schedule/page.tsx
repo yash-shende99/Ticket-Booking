@@ -1,12 +1,21 @@
 import dbConnect from "@/lib/db";
 import { Train } from "@/models/Train";
 import Link from "next/link";
+import Pagination from "@/components/Pagination";
 
 export const dynamic = 'force-dynamic';
 
-export default async function ScheduleIndexPage() {
+export default async function ScheduleIndexPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   await dbConnect();
+  
+  const { page: pageStr } = await searchParams;
+  const page = parseInt(pageStr || "1");
+  const limit = 6;
+  
   const trains = await Train.find({ isActive: true }).sort({ name: 1 }).lean();
+  
+  const totalPages = Math.ceil(trains.length / limit);
+  const trainsToDisplay = trains.slice((page - 1) * limit, page * limit);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-16">
@@ -16,7 +25,7 @@ export default async function ScheduleIndexPage() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {trains.map(train => (
+        {trainsToDisplay.map((train: any) => (
           <Link 
             key={train._id.toString()} 
             href={`/schedule/${train._id.toString()}`}
@@ -43,6 +52,8 @@ export default async function ScheduleIndexPage() {
           </Link>
         ))}
       </div>
+      
+      <Pagination currentPage={page} totalPages={totalPages} />
     </div>
   );
 }

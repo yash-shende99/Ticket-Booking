@@ -5,8 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+import Pagination from "@/components/Pagination";
+
 export default function BookingsClient({ initialBookings }: { initialBookings: any[] }) {
   const [activeTab, setActiveTab] = useState<"UPCOMING" | "COMPLETED" | "CANCELLED">("UPCOMING");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const router = useRouter();
 
   // Filter bookings based on status and date
@@ -17,9 +21,18 @@ export default function BookingsClient({ initialBookings }: { initialBookings: a
   const completedBookings = initialBookings.filter(b => b.status !== "CANCELLED" && new Date(b.journeyDate) < now);
   const cancelledBookings = initialBookings.filter(b => b.status === "CANCELLED");
 
-  let displayBookings = upcomingBookings;
-  if (activeTab === "COMPLETED") displayBookings = completedBookings;
-  else if (activeTab === "CANCELLED") displayBookings = cancelledBookings;
+  let allDisplayBookings = upcomingBookings;
+  if (activeTab === "COMPLETED") allDisplayBookings = completedBookings;
+  else if (activeTab === "CANCELLED") allDisplayBookings = cancelledBookings;
+  
+  const totalPages = Math.ceil(allDisplayBookings.length / itemsPerPage);
+  const displayBookings = allDisplayBookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleTabChange = (tab: "UPCOMING" | "COMPLETED" | "CANCELLED") => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
 
   const handleShare = async (pnr: string) => {
     const url = `${window.location.origin}/bookings/${pnr}`;
@@ -56,19 +69,19 @@ export default function BookingsClient({ initialBookings }: { initialBookings: a
       {/* Tabs */}
       <div className="flex gap-4 border-b border-slate-200 mb-8 overflow-x-auto pb-1">
         <button 
-          onClick={() => setActiveTab("UPCOMING")}
+          onClick={() => handleTabChange("UPCOMING")}
           className={`pb-3 px-4 font-bold whitespace-nowrap transition-colors border-b-2 ${activeTab === 'UPCOMING' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
         >
           Upcoming Trips ({upcomingBookings.length})
         </button>
         <button 
-          onClick={() => setActiveTab("COMPLETED")}
+          onClick={() => handleTabChange("COMPLETED")}
           className={`pb-3 px-4 font-bold whitespace-nowrap transition-colors border-b-2 ${activeTab === 'COMPLETED' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
         >
           Completed Trips ({completedBookings.length})
         </button>
         <button 
-          onClick={() => setActiveTab("CANCELLED")}
+          onClick={() => handleTabChange("CANCELLED")}
           className={`pb-3 px-4 font-bold whitespace-nowrap transition-colors border-b-2 ${activeTab === 'CANCELLED' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}`}
         >
           Cancelled Trips ({cancelledBookings.length})
@@ -179,6 +192,13 @@ export default function BookingsClient({ initialBookings }: { initialBookings: a
           })
         )}
       </div>
+
+      <Pagination 
+        currentPage={currentPage} 
+        totalPages={totalPages} 
+        onPageChange={setCurrentPage} 
+      />
     </div>
   );
 }
+
