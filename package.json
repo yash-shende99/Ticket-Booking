@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "refresh-data": "tsx scripts/refresh-data.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.2",
