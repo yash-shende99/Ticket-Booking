@@ -4,10 +4,17 @@ import { useState } from "react";
 import { createNotification, deleteNotification } from "./actions";
 import { AlertCircle, Bell, Info } from "lucide-react";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 export default function NotificationClient({ initialNotifications }: { initialNotifications: any[] }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(notifications.length / itemsPerPage);
+  const displayNotifications = notifications.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Form State
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -99,12 +106,12 @@ export default function NotificationClient({ initialNotifications }: { initialNo
       {/* Existing Notifications */}
       <div className="space-y-4">
         <h3 className="font-bold text-slate-500 uppercase tracking-wider text-sm px-2">Active Announcements</h3>
-        {notifications.length === 0 && (
+        {displayNotifications.length === 0 && (
           <div className="text-center py-12 text-slate-500 font-medium bg-white rounded-3xl border border-slate-200 shadow-sm">
             No active announcements.
           </div>
         )}
-        {notifications.map((notif) => (
+        {displayNotifications.map((notif: any) => (
           <div key={notif._id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
             <div className={`p-3 rounded-2xl ${
               notif.type === 'ALERT' ? 'bg-red-50 text-red-600' :
@@ -142,6 +149,7 @@ export default function NotificationClient({ initialNotifications }: { initialNo
             </div>
           </div>
         ))}
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
     </div>
   );

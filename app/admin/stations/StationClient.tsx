@@ -3,11 +3,19 @@
 import { useState } from "react";
 import { createStation, deleteStation } from "./actions";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 export default function StationClient({ initialStations }: { initialStations: any[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [stations, setStations] = useState(initialStations);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(stations.length / itemsPerPage);
+  const displayStations = stations.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -19,7 +27,7 @@ export default function StationClient({ initialStations }: { initialStations: an
       toast.error(res.error);
     } else {
       (e.target as HTMLFormElement).reset();
-      toast.success("Station added successfully!");
+      toast.success("Station added successfully! Refresh to see.");
     }
     setLoading(false);
   };
@@ -29,13 +37,14 @@ export default function StationClient({ initialStations }: { initialStations: an
     if (res?.error) {
       toast.error(res.error);
     } else {
+      setStations(stations.filter((s: any) => s._id !== id));
       toast.success("Station deleted successfully");
     }
     setConfirmDeleteId(null);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Create Form */}
       <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl">
         <h2 className="text-xl font-bold text-slate-800 mb-4">Add New Station</h2>
@@ -77,7 +86,7 @@ export default function StationClient({ initialStations }: { initialStations: an
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {initialStations.map((station) => (
+            {displayStations.map((station: any) => (
               <tr key={station._id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-black text-sm tracking-wider">
@@ -101,7 +110,7 @@ export default function StationClient({ initialStations }: { initialStations: an
                 </td>
               </tr>
             ))}
-            {initialStations.length === 0 && (
+            {displayStations.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-slate-500 font-medium">No stations found.</td>
               </tr>
@@ -109,6 +118,7 @@ export default function StationClient({ initialStations }: { initialStations: an
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }

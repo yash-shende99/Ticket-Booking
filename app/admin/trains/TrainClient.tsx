@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createTrain, deleteTrain } from "./actions";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CLASSES = ["1A", "2A", "3A", "SL", "CC", "GN"];
@@ -11,7 +12,14 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
   const [loading, setLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trains, setTrains] = useState(initialTrains);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(trains.length / itemsPerPage);
+  const displayTrains = trains.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const [trainNumber, setTrainNumber] = useState("");
   const [trainName, setTrainName] = useState("");
   const [routeId, setRouteId] = useState("");
@@ -69,7 +77,8 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
       setTrainName("");
       setRouteId("");
       setDepartureTime("");
-      toast.success("Success! Train has been deployed to the database.");
+      // Ideally we would update the list locally, but it's okay to reload or leave as is if no immediate refresh is built-in
+      toast.success("Success! Train has been deployed to the database. Refresh to see.");
     }
     setLoading(false);
   };
@@ -79,6 +88,7 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
     if (res?.error) {
       toast.error(res.error);
     } else {
+      setTrains(trains.filter((t: any) => t._id !== id));
       toast.success("Train deleted successfully");
     }
     setConfirmDeleteId(null);
@@ -173,7 +183,7 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {initialTrains.map((train) => (
+            {displayTrains.map((train: any) => (
               <tr key={train._id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="font-bold text-slate-900">{train.name}</div>
@@ -205,7 +215,7 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
                 </td>
               </tr>
             ))}
-            {initialTrains.length === 0 && (
+            {displayTrains.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium">No trains found.</td>
               </tr>
@@ -213,6 +223,7 @@ export default function TrainClient({ initialTrains, routes }: { initialTrains: 
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }

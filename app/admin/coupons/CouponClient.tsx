@@ -3,10 +3,17 @@
 import { useState } from "react";
 import { createCoupon, toggleCoupon, deleteCoupon } from "./actions";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 export default function CouponClient({ initialCoupons }: { initialCoupons: any[] }) {
   const [coupons, setCoupons] = useState(initialCoupons);
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(coupons.length / itemsPerPage);
+  const displayCoupons = coupons.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Form State
   const [code, setCode] = useState("");
   const [discountPercentage, setDiscount] = useState("");
@@ -131,7 +138,7 @@ export default function CouponClient({ initialCoupons }: { initialCoupons: any[]
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {coupons.map((coupon) => {
+              {displayCoupons.map((coupon: any) => {
                 const isExpired = new Date(coupon.validUntil) < new Date();
                 return (
                   <tr key={coupon._id} className="hover:bg-slate-50 transition-colors">
@@ -175,7 +182,7 @@ export default function CouponClient({ initialCoupons }: { initialCoupons: any[]
                   </tr>
                 );
               })}
-              {coupons.length === 0 && (
+              {displayCoupons.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">
                     No promo codes have been generated yet.
@@ -186,6 +193,7 @@ export default function CouponClient({ initialCoupons }: { initialCoupons: any[]
           </table>
         </div>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }

@@ -1,15 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import Pagination from "@/components/Pagination";
 
 export default function BookingClient({ initialBookings }: { initialBookings: any[] }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const filteredBookings = initialBookings.filter(b => 
     b.pnr.toLowerCase().includes(searchTerm.toLowerCase()) || 
     b.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.train.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const displayBookings = filteredBookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="space-y-6">
@@ -18,7 +29,7 @@ export default function BookingClient({ initialBookings }: { initialBookings: an
           type="text" 
           placeholder="Search by PNR, Passenger, or Train..." 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearchChange}
           className="w-full sm:w-96 px-4 py-3 rounded-2xl bg-white border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-sm"
         />
         <div className="text-sm font-bold text-slate-500 bg-white px-4 py-3 rounded-2xl border border-slate-200 shadow-sm">
@@ -40,7 +51,7 @@ export default function BookingClient({ initialBookings }: { initialBookings: an
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredBookings.map((booking) => (
+              {displayBookings.map((booking: any) => (
                 <tr key={booking._id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-black text-slate-900">{booking.pnr}</div>
@@ -74,7 +85,7 @@ export default function BookingClient({ initialBookings }: { initialBookings: an
                   </td>
                 </tr>
               ))}
-              {filteredBookings.length === 0 && (
+              {displayBookings.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">
                     No bookings found matching "{searchTerm}"
@@ -85,6 +96,7 @@ export default function BookingClient({ initialBookings }: { initialBookings: an
           </table>
         </div>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }

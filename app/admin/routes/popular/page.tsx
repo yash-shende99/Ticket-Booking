@@ -5,12 +5,17 @@ import dbConnect from "@/lib/db";
 import { Booking } from "@/models/Booking";
 import { Train } from "@/models/Train";
 import mongoose from "mongoose";
+import Pagination from "@/components/Pagination";
 
 export const dynamic = 'force-dynamic';
 
-export default async function PopularRoutesPage() {
+export default async function PopularRoutesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session || (session.user as any).role !== "admin") redirect("/admin/login");
+
+  const resolvedParams = await searchParams;
+  const currentPage = Number(resolvedParams.page) || 1;
+  const itemsPerPage = 15;
 
   await dbConnect();
   
@@ -26,8 +31,11 @@ export default async function PopularRoutesPage() {
     { $unwind: { path: '$route', preserveNullAndEmptyArrays: true } }
   ]);
 
+  const totalPages = Math.ceil(popularRoutes.length / itemsPerPage);
+  const displayRoutes = popularRoutes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">Popular Routes</h1>
         <p className="text-slate-500 font-medium mt-1">Discover your highest performing train sectors by volume.</p>
@@ -45,9 +53,9 @@ export default async function PopularRoutesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {popularRoutes.map((route: any, idx: number) => (
+              {displayRoutes.map((route: any, idx: number) => (
                 <tr key={route._id.toString()} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-black text-slate-400">#{idx + 1}</td>
+                  <td className="px-6 py-4 font-black text-slate-400">#{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{route.route?.routeName || route.train?.name || "Unknown Route"}</div>
                     <div className="text-xs font-medium text-slate-500">{route.train?.name} · Train No. {route.train?.trainNumber || "N/A"}</div>
@@ -62,7 +70,7 @@ export default async function PopularRoutesPage() {
                   </td>
                 </tr>
               ))}
-              {popularRoutes.length === 0 && (
+              {displayRoutes.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-500 font-medium">No active routes data.</td>
                 </tr>
@@ -71,6 +79,7 @@ export default async function PopularRoutesPage() {
           </table>
         </div>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} />
     </div>
   );
 }

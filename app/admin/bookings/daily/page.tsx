@@ -6,12 +6,17 @@ import { Booking } from "@/models/Booking";
 import { Train } from "@/models/Train";
 import { User } from "@/models/User";
 import mongoose from "mongoose";
+import Pagination from "@/components/Pagination";
 
 export const dynamic = 'force-dynamic';
 
-export default async function DailyBookingsPage() {
+export default async function DailyBookingsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session || (session.user as any).role !== "admin") redirect("/admin/login");
+
+  const resolvedParams = await searchParams;
+  const currentPage = Number(resolvedParams.page) || 1;
+  const itemsPerPage = 15;
 
   await dbConnect();
   
@@ -26,9 +31,12 @@ export default async function DailyBookingsPage() {
     .populate("trainId", "trainNumber name")
     .sort({ createdAt: -1 })
     .lean();
+    
+  const totalPages = Math.ceil(dailyBookings.length / itemsPerPage);
+  const displayBookings = dailyBookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">Today's Bookings</h1>
         <p className="text-slate-500 font-medium mt-1">Live feed of all tickets booked since midnight.</p>
@@ -48,7 +56,7 @@ export default async function DailyBookingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {dailyBookings.map((booking: any) => (
+              {displayBookings.map((booking: any) => (
                 <tr key={booking._id.toString()} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-bold text-slate-500">
                     {new Date(booking.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -76,7 +84,7 @@ export default async function DailyBookingsPage() {
                   </td>
                 </tr>
               ))}
-              {dailyBookings.length === 0 && (
+              {displayBookings.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">No bookings recorded today yet.</td>
                 </tr>
@@ -85,6 +93,7 @@ export default async function DailyBookingsPage() {
           </table>
         </div>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} />
     </div>
   );
 }

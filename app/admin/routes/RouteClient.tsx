@@ -4,11 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { createRoute, deleteRoute } from "./actions";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 export default function RouteClient({ initialRoutes, stations }: { initialRoutes: any[], stations: any[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [routes, setRoutes] = useState(initialRoutes);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(routes.length / itemsPerPage);
+  const displayRoutes = routes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   
   const [routeName, setRouteName] = useState("");
   const [routeStations, setRouteStations] = useState<{station: string, distance: number, halt: number, dayOffset: number}[]>([
@@ -77,13 +85,14 @@ export default function RouteClient({ initialRoutes, stations }: { initialRoutes
     if (res?.error) {
       toast.error(res.error);
     } else {
+      setRoutes(routes.filter((r: any) => r._id !== id));
       toast.success("Route deleted successfully");
     }
     setConfirmDeleteId(null);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Create Form */}
       <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl">
         <h2 className="text-xl font-bold text-slate-800 mb-4">Build New Route</h2>
@@ -174,7 +183,7 @@ export default function RouteClient({ initialRoutes, stations }: { initialRoutes
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {initialRoutes.map((route) => (
+            {displayRoutes.map((route: any) => (
               <tr key={route._id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-bold text-slate-900">{route.routeName}</td>
                 <td className="px-6 py-4 font-medium text-slate-500">{route.source?.name} ({route.source?.code})</td>
@@ -198,7 +207,7 @@ export default function RouteClient({ initialRoutes, stations }: { initialRoutes
                 </td>
               </tr>
             ))}
-            {initialRoutes.length === 0 && (
+            {displayRoutes.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium">No routes found.</td>
               </tr>
@@ -206,6 +215,7 @@ export default function RouteClient({ initialRoutes, stations }: { initialRoutes
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }

@@ -3,11 +3,18 @@
 import { useState } from "react";
 import { processRefund } from "./actions";
 import toast from "react-hot-toast";
+import Pagination from "@/components/Pagination";
 
 export default function RefundClient({ initialRefunds }: { initialRefunds: any[] }) {
   const [refunds, setRefunds] = useState(initialRefunds);
   const [loading, setLoading] = useState<string | null>(null);
   const [confirmRefundId, setConfirmRefundId] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
+  const totalPages = Math.ceil(refunds.length / itemsPerPage);
+  const displayRefunds = refunds.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleRefund = async (bookingId: string) => {
     setLoading(bookingId);
@@ -38,7 +45,7 @@ export default function RefundClient({ initialRefunds }: { initialRefunds: any[]
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {refunds.map((refund) => (
+            {displayRefunds.map((refund: any) => (
               <tr key={refund._id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4 font-black text-slate-900">{refund.pnr}</td>
                 <td className="px-6 py-4">
@@ -83,7 +90,7 @@ export default function RefundClient({ initialRefunds }: { initialRefunds: any[]
                 </td>
               </tr>
             ))}
-            {refunds.length === 0 && (
+            {displayRefunds.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">
                   No refunds pending.
@@ -93,6 +100,7 @@ export default function RefundClient({ initialRefunds }: { initialRefunds: any[]
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 }
